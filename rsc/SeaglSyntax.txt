@@ -1,0 +1,18 @@
+
+Syntaxe basique:
+	- applications de fonction curryée genre f g h
+	- un opérateur virgule pour faire des tuples sans avoir besoin de parens; mais f x, g y doit être parsé ((f g), (h y))
+	- une syntaxe de lambda { pattern1 => code1 | pattern2 | code2 ... }
+		où 'pattern' peut avoir la forme de n'importe quelle expression normale (il serait sans doute utile de regrouper l'implémentation)
+	- binding dans les patterns fait avec ~ et dans les expressions avec ~> et <~ (expr ~> pattern)
+		on peut binder différents patterns ensemble, genre A ~ B ~ C, eg: { str @ beginsWith('a') @ endsWith('x') => print str }
+		dans les expr:
+			x,y <~ getPos; print (x,y)
+		ou
+			foo (x,y <~ getPos) x y
+	- avoir des opérateurs composition de symboles (genre ?!$, +, etc)
+	- traiter les méthodes comme des opérateurs: a.b c == (.b) a c
+	- les définitions sont de la forme "f = code", mais avec une syntaxe au sucre qui autorise "f pattern = code"
+	- pour commencer, utiliser un opérateur ';' pour séparer les expressions; à terme, on devrait pouvoir l'omettre et interpréter '\n' comme un ';'...
+
+
