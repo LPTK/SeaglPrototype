@@ -64,7 +64,7 @@ In order to branch on the structure of a type, a type lambda will require the `I
 
 ### Abstract Operation Types
 
-Applying types to a value operation defines *operation types*. For example, while `A.Foo B` is just a shortcut for `Foo A B`, `A.foo B` is a special type that represents *the type of calling `foo` on an object of type `A`, passing it an object of type `B`*.  
+Applying types to a value operation defines an *operation type*. For example, while `A.Foo B` is just a shortcut for `Foo A B`, `A.foo B` is a special type that represents *the type of calling `foo` on an object of type `A`, passing it an object of type `B`*.  
 When `A` is concrete, it will be immediately reduced (evaluated) to the corresponding type. However, when `A` is abstract, it will be kept as is until we can evaluate it at a later stage.
 
 
@@ -122,6 +122,8 @@ Matching `Foo` looks in the current scope for a definition named `ext_Foo` ...
 ### Regions
 
 Regions are particular types. With each local value `v`, a region `@v` is implicitly defined.
+
+Regions have the power of regular expressions. Operator `|` expresses alternation, `*` expresses repetition and `.` concatenation. For example, `@tr.(left|right)*.value` is a region that encompasses all values contained in a tree variable `tr`.
 
 
 ### Abstract and Concrete Effects
@@ -240,7 +242,7 @@ s: Str.Ref @ls.tail*.head
 
 ## Subtyping
 
-Contrary to many languages, subtyping is not used in conjunction to some kind of inheritance mechanism. It is essentially restricted to regions, erased types, and variant generic types (for example, `List A <: List B` if `A <: B`).  
+Contrary to many languages, subtyping is not used in conjunction to some kind of inheritance mechanism. It is essentially restricted to regions, erased types, refinement types, and variant generic types (for example, `List A <: List B` if `A <: B`).  
 In fact, for efficiency reasons, a type `A` cannot subtype `B` if they don't have compatible memory repreentations (size and alignment) -- but this is an implementation detail.
 
 
@@ -252,6 +254,13 @@ Obviously, `@a.b` <: `@a.(b|c)`, etc.
 ### Erased Types Sutyping
 
 If abstract type `T` implements `S`, then an object of erased type `?T` can be used as an `?S`.
+
+
+### Refinement Types
+
+Type `42` (or `42T`) is the type only inhabited by value `42`. We have `42 <: Int`.
+
+Similarly, we could define refinement types based on predicates, like the type of all strictly positive integers `Int{_ > 0} <: Int`.
 
 
 
