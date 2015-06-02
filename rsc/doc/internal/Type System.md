@@ -169,7 +169,7 @@ Keyword `where` expresses constraints on abstract types.
 
 ```
 bar f x y = if x < y then f x else f y
-bar: F,X,Y,R => F -> X -> Y -> R 
+bar: F,X,Y,R => F -> X -> Y -> R  ! X < Y ! F.apply X ! F.apply Y
 where
 	F.apply X <: R
 	F.apply Y <: R
@@ -182,6 +182,20 @@ bar op 42 "ko"  // Error: 'op' not defined on Str; '<' not defined on Int Str
 assert (bar op 42 24) == 25
 assert (op.bar 42 24) == 25
 ```
+
+### Example with Effects
+
+```
+foo f = f 42; s = "ok"; f ok; ()
+foo: F => F -> ()  ! F.apply Int ! F.apply (Str.Ref @local)
+
+i = 0
+i: Int
+op = _ => i += 1
+op: T => () ! <@i, @i.const>  // op reads i, mutates i (op invalidates i's "constness")
+foo op : () ! <@i, @i.const>
+```
+
 
 ### Regular Types
 
