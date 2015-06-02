@@ -1,0 +1,23 @@
+// Most important
+
+foo = { x => { y => x + y } }
+foo x y = x + y
+foo 1 2
+
+foo = { x, y => x + y }
+foo (x, y) = x + y
+foo (1, 2)
+
+foo bar baz == ((foo bar) baz)
+
+foo.op bar
+foo.op(bar, baz) == (.op) foo (bar, baz)
+
+
+// Less important -- for later
+
+foo (PatternA x) ~ (PatternB y z) = x + y + z
+
+(x,y) <~ pos
+
+
