@@ -30,7 +30,7 @@ a = x  // value
 Wrongful mixes of type and value expressions will be detected after parsing, during AST construction.
 
 Just like values, higher-order types can be expressed in the form of lambdas. This is how generic types are expressed.
-All the following are equivalent:
+The following are equivalent:
 ````
 List = T => (Cons T | Nil)
 List T = Cons T | Nil
@@ -74,11 +74,11 @@ When `A` is concrete, it will be immediately reduced (evaluated) to the correspo
 Structural types are abstract types that can be use as type bounds, writen `Type : Bound`.
 
 ```
-MyStrcType = { method: Self -> Int; free: Int -> Int }
+MyStrcType = { mtd: Self -> Int; free: Int -> Int }
 
-test [T: MyStrcType] (x: T) = x.foo + (T::free 42)
+test [T: MyStrcType] (x: T) = x.mtd + (T::free 42)
 // or
-test (x: T: MyStrcType) = x.foo + (T::free 42)
+test (x: T: MyStrcType) = x.mtd + (T::free 42)
 
 test: (T: MyStrcType) => T -> Int
 ```
