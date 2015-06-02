@@ -27,7 +27,7 @@ A = X  // type
 a = x  // value
 ````
 
-Wrongful mixes of type and value expressions will be detected after parsing, during AST construction.
+Wrongful mixes of type and value expressions will be detected after parsing, during TAST construction.
 
 Just like values, higher-order types can be expressed in the form of lambdas. This is how generic types are expressed.
 The following are equivalent:
