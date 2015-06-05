@@ -9,91 +9,88 @@ trait Stage extends Terms {
   type TypSym
   type ValSym
   
-  type ValueWrap //<: Stmt
-  
-  type Decl
+  type ValueNode
+  type TypeNode = Type  // change if necessary in the future
   
   type TypeSpec
   type TypeParam
   
-  
-  def tname(s: TypSym): Str
-  def vname(s: ValSym): Str
-  def tpname(s: TypeParam): Str  
+//  // TODOne use Printable type class instances instead
+//  def tname(s: TypSym): Str
+//  def vname(s: ValSym): Str
+//  def tpname(s: TypeParam): Str  
   
 }
 
 
 object Stages {
   import utils.Lazy
-  import scala.util.Try
   
-  trait Pretyped {
-  self: Stage =>
-    
-    type ValueWrap = Value
-    
-    type TypeSpec = Opt[Type]
-    
-  }
+  // Main compilation stages:
   
-  object Ast extends Stage with Pretyped {
+  object Ast extends Stage with PretypedStage {
     
     type TypSym = TId
     type ValSym = VId
     
     type TypeParam = TId
     
-    def tname(s: TypSym) = s.toString
-    def vname(s: ValSym) = s.toString
-    def tpname(s: TypeParam) = s.toString
+//    def tname(s: TypSym) = s.toString
+//    def vname(s: ValSym) = s.toString
+//    def tpname(s: TypeParam) = s.toString
     
   }
-  
-  
-  object Resolving extends Stage with Pretyped {
+  object Resolving extends Stage with PretypedStage {
     
-    type TypSym = Lazy[Type]
-    type ValSym = Lazy[Value]
+    type TypSym = Lazy[TSym]
+    type ValSym = Lazy[VSym]
     
     type TypeParam = Nothing // AbsTyp // TODO
     
-    def tname(s: TypSym) = "??"
-    def vname(s: ValSym) = "??"
-    def tpname(s: TypeParam) = ??? // s.namStr // TODO
+//    def tname(s: TypSym) = "??"
+//    def vname(s: ValSym) = "??"
+//    def tpname(s: TypeParam) = ??? // s.namStr // TODO
+    
+  }
+  object Resolved extends Stage with PretypedStage with ResolvedStage {
+    
+  }
+//  object Typed extends Stage with ResolvedStage {
+//    import typing._
+//    
+//    type ValueNode = Typed[Value]
+//    
+//    type TypeSpec = Type
+//    
+//  }
+  
+  // Common stage definitions:
+  
+  trait PretypedStage {
+  self: Stage =>
+    
+    type ValueNode = Value
+    
+    type TypeSpec = Opt[Type]
     
   }
   
   trait ResolvedStage {
   self: Stage =>
     
-    type TypSym = Cyclic[Type]
-    type ValSym = Cyclic[Value]
+//    type TypSym = Cyclic[Type]
+//    type ValSym = Cyclic[Value]
+    type TypSym = TSym
+    type ValSym = VSym
     
     type TypeParam = Nothing // AbsTyp // TODO
     
     
-    def tname(s: TypSym) = s.value.print
-    def vname(s: ValSym) = if (s.wasComputerYet) s.value.print.toString else "??"
-    def tpname(s: TypeParam): Str = ??? // s.namStr // TODO
+//    def tname(s: TypSym) = s.print()
+//    def vname(s: ValSym) = s.print()
+//    def tpname(s: TypeParam): Str = ??? // s.namStr // TODO
     
   }
-  
-  object Resolved extends Stage with Pretyped with ResolvedStage {
-    
-  }
-  
-//  object Typed extends Stage with ResolvedStage {
-//    import typing._
-//    
-//    type ValueWrap = Typd[BasicExpr]
-//    
-//    type TypeSpec = Type
-//    
-//  }
-  
-  
-  
   
   
   object NilStage extends Stage {
@@ -105,7 +102,7 @@ object Stages {
     
     type TypeParam = N
     
-    type ValueWrap = N
+    type ValueNode = N
     
     type TypeSpec = N
     

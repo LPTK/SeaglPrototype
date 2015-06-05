@@ -1,58 +1,84 @@
 package front
 
 import utils._
-import common.Stage
+import common._
+
+import Printable._
 
 trait Terms {
 stage: Stage =>
   
+  sealed trait Decl
+  
   abstract class TermsTemplate {
-//    import Terms._
     
     type DualWorld <: TermsTemplate
     val dualWorld: DualWorld
     
-    type Wrap
+    type Node
+    type Kind  // TODO rm: not used/useful?
+    type Sym
     
-    type Kind
-    type SymbolType
+//    sealed trait Stmt extends Printable
+//    
+//    case class Def(sym: Sym, body: Node, dual: Boolean = false) extends Stmt {
+//      def print(implicit po: PrintOptions): Str = p"$sym = $body"
+//    }
     
-    sealed trait Stmt
-    
-    case class Def(name: Sym, body: Term, dual: Boolean = false) extends Stmt
-    
-    sealed trait Term extends Stmt {
-      def print = "..." // TODO
+    implicit val nodePrintable: Printable[Node]
+    implicit val extPrintable: Printable[Extract[Nothing]] =
+      Printable{ext => "`" + ext.x.print }
+    /** TODO handle right parenthezsisaztion */
+    implicit val termPrintable: Printable[Term] = Printable {
+      case Literal(v) => p"${v.toString}"
+      case Ref(s) => p"${s.toString}"
+      case Let(s, v, b) => p"${s.toString} = $v; $b"
+      case Lambda(a, b) => p"${a.toString} => $b" // FIXME rm toString
+      case App(f, a) => p"$f $a"
+      case DepApp(f, a) => p"$f[${a.toString}]"
+//        case Ascribe(v, t) => p"$v: ${t.toString}"
     }
     
-  //  case class Dual(t: dualWorld.Term) extends Term
-    case class Dependent(dep: dualWorld.Wrap, body: Wrap) extends Term
+    sealed trait ValueTerm
+    sealed trait TypeTerm
     
-    case class App(fun: Wrap, arg: Wrap) extends Term
+    sealed trait Term extends ValueTerm with TypeTerm {
+      override def toString = this.print
+    }
     
-  //  case class DualApp(dual: DualMode[Term], f: Term, a: Term) extends Term
-    case class DualApp(dualArg: DualMode[dualWorld.Wrap], f: Wrap, a: Wrap) extends Term
+    case class Literal[T](value: T) extends Term
     
-    type Arg = DualMode[Wrap]
+    case class Ref(sym: Sym) extends Term
     
-    case class Lambda(arg: Arg, body: Wrap) extends Term
+    case class App(fun: Node, arg: Node) extends Term
     
-    case class Scope(stmts: Seq[Stmt], r: Wrap) extends Term
+    type Arg = Extract[Node] // FIXME: question: is Extarction really part of the core language?! (can be encoded using express)
+    case class Lambda(arg: Arg, body: Node) extends Term
     
-    case class Symbol(s: SymbolType) extends Term
+    case class Let(sym: Sym, value: Node, body: Node) extends Term with Decl
+    
+//    case class Dual(t: dualWorld.Term) extends Term
+//    case class Dependent(dep: dualWorld.Node, body: Node) extends Term
+    case class DepApp(fun: Node, darg: dualWorld.Node) extends Term
     
     
-    case class UnitTerm() extends Term
+//    case class Ascribe(v: Node, t: dualWorld.Node) extends ValueTerm
+    case class Ascribe(v: ValueNode, t: Type) extends ValueTerm
     
     
     
+    
+    /** On another dimension than type/value, dual to expression world is extraction world */
+    // trait DualMode[+T]
+    case class Extract[+T](x: Node) {
+      def print(implicit po: PrintOptions) = x.print
+    }
+    // TODO: should extraction really be a part of the core language?
+  
     
     
   }
   
-  type Sym = Symbol
-  
-  trait DualMode[+T]
   
   sealed trait TypeKind
   case object StarKind extends TypeKind
@@ -62,39 +88,30 @@ stage: Stage =>
   object types extends TermsTemplate {
     type DualWorld = values.type
     val dualWorld = values
-    type Wrap = Term
+    
+    type Node = TypeNode//Term
     type Kind = TypeKind
-//    type SymbolType = TypeKindInfer.KindSchema
-    type SymbolType = TypeKind
+    type Sym = TypSym
+    
+    val nodePrintable: Printable[Node] = ??? // TODO
   }
   object values extends TermsTemplate {
     type DualWorld = types.type
     val dualWorld = types
-    type Wrap = ValueWrap
+    
+    type Node = ValueNode
     type Kind = Type
+    type Sym = ValSym
+    
+    val nodePrintable: Printable[Node] = ??? // TODO
   }
-  type Type = types.Term
-  type Value = values.Term
   
-  
-//  val x = types.Dependent(values.UnitTerm(), types.UnitTerm())
-  
-  
-  
-//  sealed trait TypeTree
-//  
-//  case class Dependent(dep: Value, body: Type) extends TypeTree
-//
-//  case class RecordType(fields: Seq[(Sym, Type)]) extends TypeTree
-//  
-//  case class FunctionType(from: Type, to: Type) extends TypeTree
+  type Type = types.TypeTerm
+  type Value = values.ValueTerm
   
   
   
   
-  
-
-
 }
 
 
