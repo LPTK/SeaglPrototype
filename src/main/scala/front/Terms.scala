@@ -80,13 +80,13 @@ trait Terms {
 
   object types extends TermsTemplate {
     type DualWorld = values.type
-    val dualWorld = values
+    lazy val dualWorld = values
 
     type Node = TypeNode //Term
     type Kind = TypeKind
     type Sym = TypSym
 
-    val nodePrintable: Printable[Node] = ??? // TODO
+    val nodePrintable: Printable[Node] = Printable{_ => "??"} // TODO
   }
   object values extends TermsTemplate {
     type DualWorld = types.type
@@ -96,7 +96,7 @@ trait Terms {
     type Kind = Type
     type Sym = ValSym
 
-    val nodePrintable: Printable[Node] = ??? // TODO
+    val nodePrintable: Printable[Node] = Printable{_ => "??"} // TODO
   }
 
   type Type = types.TypeTerm

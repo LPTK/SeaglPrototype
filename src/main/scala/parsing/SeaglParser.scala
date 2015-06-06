@@ -27,7 +27,7 @@ object SeaglParser {
     def lambda: Parser[t.Term] = ("{" ~> id) ~ ("=>" ~> expression <~ "}") ^^
       { case nm ~ e => t.Lambda(t.Extract(termToNode(nm)), termToNode(e)) }
 
-    def program = definition*
+    def program = definition // * <- TODO put back
   }
 
   object TermParser extends ParserTemplate(Ast.values) {
