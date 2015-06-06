@@ -4,20 +4,20 @@ import utils._
 import Printable._
 
 trait Printable[T] {
-  
-  def print(x: T)(implicit po: PrintOptions): String 
-  
+
+  def print(x: T)(implicit po: PrintOptions): String
+
 }
 object Printable {
-  
+
   def apply[T](p: T => Str) = new Printable[T] {
     def print(x: T)(implicit po: PrintOptions) = p(x)
   }
-  
+
   type PrintOptions = Unit
-  
+
   type Document = String
-  
+
   implicit val strPrintable = new Printable[Str] {
     def print(x: Str)(implicit po: PrintOptions) = x
   }
@@ -31,8 +31,8 @@ class PrintableContext(ctx: StringContext) {
   object p {
     def apply(ps: Doc*): Document = {
       implicit val po = ()
-      
-      ctx.s(ps map (_.print))
+
+      ctx.s(ps map (_.print): _*)
     }
   }
 

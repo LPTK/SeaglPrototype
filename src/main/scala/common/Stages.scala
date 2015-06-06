@@ -2,6 +2,7 @@ package common
 
 import utils._
 import front._
+import Printable._
 
 trait Stage extends Terms {
 
@@ -9,7 +10,10 @@ trait Stage extends Terms {
   type ValSym
 
   type ValueNode
-  type TypeNode = Type // change if necessary in the future
+  type TypeNode = Type // change if necessary in the future (+typeNodePrintable)
+
+  implicit val valueNodePrintable: Printable[ValueNode]
+  implicit val typeNodePrintable: Printable[TypeNode] = Printable { _ => "??" } // TODO
 
   type TypeSpec
   type TypeParam
@@ -71,6 +75,9 @@ object Stages {
 
     type TypeSpec = Opt[Type]
 
+    implicit val valueNodePrintable: Printable[ValueNode] =
+      // Kinda hacky but works, except for ascribe
+      Printable { x => values.termPrintable.print(x match { case x: values.Term => x })() }
   }
 
   trait ResolvedStage {
@@ -101,6 +108,8 @@ object Stages {
     type ValueNode = N
 
     type TypeSpec = N
+
+    val valueNodePrintable: Printable[ValueNode] = ???
 
     def tname(s: TypSym) = ???
     def vname(s: ValSym) = ???

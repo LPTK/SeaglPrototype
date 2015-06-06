@@ -30,6 +30,7 @@ trait Terms {
       Printable { ext => "`" + ext.x.print }
     /** TODO handle right parenthezsisaztion */
     implicit val termPrintable: Printable[Term] = Printable {
+      case Unit()       => p"()"
       case Literal(v)   => p"${v.toString}"
       case Ref(s)       => p"${s.toString}"
       case Let(s, v, b) => p"${s.toString} = $v; $b"
@@ -45,6 +46,8 @@ trait Terms {
     sealed trait Term extends ValueTerm with TypeTerm {
       override def toString = this.print
     }
+
+    case class Unit() extends Term
 
     case class Literal[T](value: T) extends Term
 
@@ -86,7 +89,7 @@ trait Terms {
     type Kind = TypeKind
     type Sym = TypSym
 
-    val nodePrintable: Printable[Node] = Printable{_ => "??"} // TODO
+    implicit val nodePrintable: Printable[Node] = stage.typeNodePrintable
   }
   object values extends TermsTemplate {
     type DualWorld = types.type
@@ -96,7 +99,7 @@ trait Terms {
     type Kind = Type
     type Sym = ValSym
 
-    val nodePrintable: Printable[Node] = Printable{_ => "??"} // TODO
+    implicit val nodePrintable: Printable[Node] = stage.valueNodePrintable
   }
 
   type Type = types.TypeTerm
