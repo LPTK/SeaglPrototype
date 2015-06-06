@@ -17,7 +17,7 @@ object Presolve extends StageConverter(Ast, Resolving) {
 //  case class Ctx (parent: Option[Ctx], typTable: Map[TId, TSym] = Map(), valTable: Map[VId, VSym] = Map())
   class Ctx (parent: Option[Ctx], typTable: Map[TId, TSym] = Map(), valTable: Map[VId, VSym] = Map())
   {
-    def this(parent: Ctx) = this(parent)
+    def this(parent: Ctx) = this(Some(parent))
     
     def apply(x: TId): TSym = (typTable get x, parent) match {
       case (Some(v), _) => v
@@ -49,11 +49,13 @@ object Presolve extends StageConverter(Ast, Resolving) {
   override def processVal(x: a.Value)(implicit c: Ctx): Value = x match {
 //    case av.Let(s, _, _) => c(s) = new VSym(s.toString); super.processVal(x)
     case av.Let(s, v, b) => c(s) = new VSym(s.toString); Let(vals(s), vnods(v)(new Ctx(c)), vnods(b))
+    case av.Lambda(av.Extract(a), b) => Lambda(Extract(vnods(a)), vnods(b)) // TODO: should introduce new bindings into context for b!!
     case av.Ref(s) => Ref(vals(s))
     case _ => super.processVal(x)
   }
   override def processTyp(x: a.Type)(implicit c: Ctx): Type = x match {
     case at.Let(s, v, b) => c(s) = new TSym(s.toString); t.Let(typs(s), tnods(v)(new Ctx(c)), tnods(b))
+      // TODO Lambda
     case at.Ref(s) => t.Ref(typs(s))
     case _ => super.processTyp(x)
   }
