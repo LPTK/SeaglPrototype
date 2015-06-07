@@ -38,8 +38,8 @@ object Presolve extends StageConverter(Ast, Resolving) {
   def typs(x: a.TypSym)(implicit c: Ctx) = { Lazy(c(x)) } // ult(ctx(x))
   def vals(x: a.ValSym)(implicit c: Ctx) = { Lazy(c(x)) }
   
-  def vnods(x: a.ValueNode)(implicit c: Ctx) = processVal(x)
-  def tnods(x: a.TypeNode)(implicit c: Ctx) = processTyp(x)
+  def vnods(x: a.ValueNode)(implicit c: Ctx) = x.to(b)(processVal) // Node(processVal(x.term), x.org)
+  def tnods(x: a.TypeNode)(implicit c: Ctx) = x.to(b)(processVal) // Node(processTyp(x.term), x.org)
 
   
 //  def tspec(x: a.TypeSpec) = x map apply
@@ -63,12 +63,13 @@ object Presolve extends StageConverter(Ast, Resolving) {
 }
 
 object Resolve extends StageConverter(Resolving, Resolved) {
+  import b._
   
   def typs(x: a.TypSym)(implicit c: Ctx) = x.get
   def vals(x: a.ValSym)(implicit c: Ctx) = x.get
   
-  def vnods(x: a.ValueNode)(implicit c: Ctx) = processVal(x)
-  def tnods(x: a.TypeNode)(implicit c: Ctx) = processTyp(x)
+  def vnods(x: a.ValueNode)(implicit c: Ctx) = Node(processVal(x.term), x.org)
+  def tnods(x: a.TypeNode)(implicit c: Ctx) = Node(processTyp(x.term), x.org)
 
   // TODO detect forwards non-function value refs? -- or actually allow them
 //  def vars(x: a.VarSym) =

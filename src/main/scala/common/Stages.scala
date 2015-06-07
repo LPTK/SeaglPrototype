@@ -10,7 +10,7 @@ trait Stage extends Terms {
   type ValSym
 
   type ValueNode
-  type TypeNode = Type // change if necessary in the future (+typeNodePrintable)
+  type TypeNode //= Type // change if necessary in the future (+typeNodePrintable)
 
   implicit val valueNodePrintable: Printable[ValueNode]
   implicit val typeNodePrintable: Printable[TypeNode] = Printable { _ => "??" } // TODO
@@ -36,11 +36,7 @@ object Stages {
     type ValSym = VId
 
     type TypeParam = TId
-
-    //    def tname(s: TypSym) = s.toString
-    //    def vname(s: ValSym) = s.toString
-    //    def tpname(s: TypeParam) = s.toString
-
+    
   }
   object Resolving extends Stage with PretypedStage {
 
@@ -71,9 +67,14 @@ object Stages {
   trait PretypedStage {
     self: Stage =>
 
-    type ValueNode = Value
+    type ValueNode = Node[Value]
+    type TypeNode = Node[Type]
 
     type TypeSpec = Opt[Type]
+    
+    case class Node[+T](term: T, org: Origin) {
+      def to[U](s: PretypedStage)(f: T => U) = s.Node(f(term), org)
+    }
 
     implicit val valueNodePrintable: Printable[ValueNode] =
       // Kinda hacky but works, except for ascribe

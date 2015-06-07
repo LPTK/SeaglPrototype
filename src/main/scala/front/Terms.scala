@@ -65,7 +65,7 @@ trait Terms {
     case class DepApp(fun: Node, darg: dualWorld.Node) extends Term
 
     //    case class Ascribe(v: Node, t: dualWorld.Node) extends ValueTerm
-    case class Ascribe(v: ValueNode, t: Type) extends ValueTerm
+    case class Ascribe(v: ValueNode, t: TypeNode) extends ValueTerm
 
     /** On another dimension than type/value, dual to expression world is extraction world */
     // trait DualMode[+T]

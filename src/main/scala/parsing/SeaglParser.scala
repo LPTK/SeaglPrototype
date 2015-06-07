@@ -36,13 +36,13 @@ object SeaglParser {
   }
 
   object TermParser extends ParserTemplate(Ast.values) {
-    def termToNode = { x => x }
+    def termToNode = { x => ??? }
 
     def strToId = VId.apply
   }
 
   object TypeParser extends ParserTemplate(Ast.types) {
-    def termToNode = { x => x }
+    def termToNode = { x => ??? }
 
     def strToId = TId.apply
   }
