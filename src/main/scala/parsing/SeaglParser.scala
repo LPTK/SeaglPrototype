@@ -12,7 +12,7 @@ object SeaglParser {
 
     def termToNode: t.Term => t.Node
 
-    def strToId: String => t.Sym
+    def strToId: String => t.TermId
 
     // Always useful
     def fail: Parser[Nothing] = "" ^? PartialFunction.empty[Any, Nothing]
@@ -23,14 +23,14 @@ object SeaglParser {
 
     // TODO: remove semicolons
     def definition = ident ~ /* (pattern*) ~*/ ("=" ~> expression <~ ";") ^^
-      { case id ~ expr => t.Let(strToId(id), termToNode(expr), termToNode(t.Unit())) }
+      { case id ~ expr => t.Let(new t.Symbol(strToId(id)), t.Scoped(termToNode(expr)), termToNode(t.Unit())) }
 
     def pattern = id
 
     def expression: Parser[t.Term] = id | lambda
 
     def lambda: Parser[t.Term] = ("{" ~> id) ~ ("=>" ~> expression <~ "}") ^^
-      { case nm ~ e => t.Lambda(t.Extract(termToNode(nm)), termToNode(e)) }
+      { case nm ~ e => t.Lambda(t.Extract(termToNode(nm)), t.Scoped(termToNode(e))) }
 
     def program = definition
   }
