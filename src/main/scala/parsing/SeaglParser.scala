@@ -12,7 +12,7 @@ object SeaglParser {
 
     def termToNode: t.Term => t.Node
 
-    def strToId: String => t.Sym
+    def strToId: String => t.TermId
 
     // Always useful
     def fail: Parser[Nothing] = "" ^? PartialFunction.empty[Any, Nothing]
@@ -22,27 +22,27 @@ object SeaglParser {
     def id /*: Parser[t.Literal[String]]*/ = ident ^^ { l => t.Literal(l) }
 
     // TODO: remove semicolons
-    def definition = ident ~ (pattern*) ~ ("=" ~> expression <~ ";") ^^
-      { case id ~ pt ~ expr => t.Let(strToId(id), termToNode(expr), termToNode(t.Unit())) }
+    def definition = ident ~ /* (pattern*) ~*/ ("=" ~> expression <~ ";") ^^
+      { case id ~ expr => t.Let(new t.Symbol(strToId(id)), t.Scoped(termToNode(expr)), termToNode(t.Unit())) }
 
     def pattern = id
 
     def expression: Parser[t.Term] = id | lambda
 
     def lambda: Parser[t.Term] = ("{" ~> id) ~ ("=>" ~> expression <~ "}") ^^
-      { case nm ~ e => t.Lambda(t.Extract(termToNode(nm)), termToNode(e)) }
+      { case nm ~ e => t.Lambda(t.Extract(termToNode(nm)), t.Scoped(termToNode(e))) }
 
     def program = definition
   }
 
   object TermParser extends ParserTemplate(Ast.values) {
-    def termToNode = { x => x }
+    def termToNode = { x => ??? }
 
     def strToId = VId.apply
   }
 
   object TypeParser extends ParserTemplate(Ast.types) {
-    def termToNode = { x => x }
+    def termToNode = { x => ??? }
 
     def strToId = TId.apply
   }
