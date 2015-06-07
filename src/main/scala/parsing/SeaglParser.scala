@@ -22,8 +22,8 @@ object SeaglParser {
     def id /*: Parser[t.Literal[String]]*/ = ident ^^ { l => t.Literal(l) }
 
     // TODO: remove semicolons
-    def definition = ident ~ /* (pattern*) ~*/ ("=" ~> expression <~ ";") ^^
-      { case id ~ expr => t.Let(strToId(id), termToNode(expr), termToNode(t.Unit())) }
+    def definition = ident ~ (pattern*) ~ ("=" ~> expression <~ ";") ^^
+      { case id ~ pt ~ expr => t.Let(strToId(id), termToNode(expr), termToNode(t.Unit())) }
 
     def pattern = id
 
