@@ -9,6 +9,9 @@ trait Terms {
   stage: Stage =>
 
   sealed trait GeneralTerm
+  
+  /** Marks whether the node introduces its own new scope or not */
+  trait ScopingNode
 
   abstract class TermsTemplate {
 
@@ -52,21 +55,20 @@ trait Terms {
 
     case class Literal[T](value: T) extends Term
 
-//    case class Ref(sym: Sym) extends Term
     case class Ref(sym: Symbol) extends Term
 
     case class App(fun: Node, arg: Node) extends Term
 
     type Arg = Extract[Node] // FIXME: question: is Extraction really part of the core language?! (can be encoded using express)
-    case class Lambda(arg: Arg, body: Scoped) extends Term
+    case class Lambda(arg: Arg, body: Scoped) extends Term with ScopingNode
 
-    case class Let(sym: Symbol, value: Scoped, body: Node) extends Term
+    case class Let(sym: Symbol, value: Scoped, body: Node) extends Term with ScopingNode
 
     //    case class Dual(t: dualWorld.Term) extends Term
     //    case class Dependent(dep: dualWorld.Node, body: Node) extends Term
     case class DepApp(fun: Node, darg: dualWorld.Node) extends Term
 
-    case class Scoped(node: Node) extends ValueTerm
+    case class Scoped(node: Node) extends Term with ScopingNode
     
     //    case class Ascribe(v: Node, t: dualWorld.Node) extends ValueTerm
     case class Ascribe(v: ValueNode, t: TypeNode) extends ValueTerm

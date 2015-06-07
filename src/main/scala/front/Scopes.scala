@@ -18,7 +18,7 @@ stage: Stage with PretypedStage =>
     private[Scopes] var parent: Option[Scope] = None
     
     val defs = term match {
-      case v.Lambda(_, _) | t.Lambda(_, _) | v.Scoped(_) | t.Scoped(_) =>
+      case _: ScopingNode =>
         val (vdefs, tdefs) = (mutable.Map[VId, stage.ValueNode](), mutable.Map[TId, stage.TypeNode]())
         object Scoper extends StageTraverser[stage.type](stage) {
           type Ctx = Unit
