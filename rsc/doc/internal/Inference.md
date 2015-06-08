@@ -12,21 +12,22 @@ There are several things to do to simplify the final generalized type of the def
  	* pairwaise unify the arguments `A..` and `B...` if `R = C B...`, acording to their variance (and if invariant, introduce a new type variable `R'` to be the LB or HB -- also applies to case above)
  	* report an error if `R = D B...` and `D != C`, `D` concrete
  	* do nothing otherwise (`R = D B..` and `D` is abstract)
- * If a type variable `R` is used only in covariant position, it can be substituted with the lower bound of its constraints
- * If a type variable `R` is used only in contravariant position, it can be substituted with the higher bound of its constraints
+ * If a type variable `R` is used only in covariant position, it can be substituted with the least upper bound (LUB) of its lower bound constraints
+ * If a type variable `R` is used only in contravariant position, it can be substituted with the greatest lower bound (GLB) of its upper bound constraints
  * Simplify subtyping expressions
 
 
 **Example**:
 
 ```
+// Assume:
 id x = x
 id: 'X -> 'X
 
 foo a = id a
 foo: 'A -> 'X  // new type variable X comes from instantiating 'id'
 where
-	'A <: 'X             // because A is used as arg in fun of type X -> X
+	'A <: 'X   // because A is used as arg in fun of type X -> X
 ```
 
 Here, `'X` is only used in covariant position (the function output), so we can replace it with its lower bound `'A`, and we obtain:
@@ -42,6 +43,7 @@ Note: Similarly, we could have replaced `'A` with `'X`, because `'A` was only us
 Assume here that `"ok"` is of type `Str.Ref @static` (the closest to how C views strings).
 
 ```
+// Assume:
 unif (x: 'T) (y: 'T) = ()
 unif: 'T -> 'T -> ()
 
@@ -60,22 +62,21 @@ where
 ```
 Unifying `'A` with `Ref` concrete type:
 ```
-foo: Str.Ref 'R2 -> Str.Ref 'R2
+foo: Str.Ref 'S -> Str.Ref 'S
 where
-	'R2     <: 'R
+	'S      <: 'R
 	@static <: 'R
 ```
-`'R` is used only in covariant position (in the subtyping expressions); replace it with its lower-bound `@static | 'R2`:
+`'R` is used only in covariant position (in the subtyping expressions); replace it with the LUB of its lower bounds,  
+`@static | 'S`:
 ```
-foo: 'R2 => Str.Ref 'R2 -> Str.Ref 'R2
-where
-	'R2 <: @static | 'R2
+foo: Str.Ref 'S -> Str.Ref 'S
+where 'S <: @static | 'S
 ```
 Simplifying the subtyping constraint, we get:
 ```
-foo: 'R2 => Str.Ref 'R2 -> Str.Ref 'R2
-where
-	'R2 <: @static
+foo: Str.Ref 'S -> Str.Ref 'S
+where 'S <: @static
 ```
 
 Note: if unit `()` had been returned instead of `a`, we could have simplified foo's signature further to:  
@@ -96,7 +97,25 @@ Because `'T` is only used covariantly (`List 'T` is covariant in `'T`), this sig
 foo: () -> List Nothing  // Nothing is the "Bottom" of the type lattice
 ```
 
-EDIT: This example is probably not well-chosen; in Seagl, types need well-defined sizes, and the size of `List T` depends on the size of `T` (unless it is stored externally, which should not be the case for lists). So there is no actual well-defined  `List Nothing` type. However, the reasoning still holds when applied to things like regions and erased types (which are all the same size since allocated externally), where we truly have subtyping. The bottom element for regions is the empty region, but there is no top (but maybe we could introduce one).
+**EDIT**: This example is probably not well-chosen; in Seagl, types need well-defined sizes, and the size of `List T` depends on the size of `T` (unless it is stored externally, which should not be the case for lists). So there is no actual well-defined  `List Nothing` type. However, the reasoning still holds when applied to things like regions and erased types (which are all the same size since allocated externally), where we truly have subtyping. The bottom element for regions is the empty region, but there is no top (but maybe we could introduce one).
+
+**Note**: It could be interesting to define a bottom for every type lattice, namely `No: * -> *`. For example, we have `No Int <: 42, `No Int <: 666, `No Int <: Int`; it has the mem repr of an `Int`, but it is an "impossible" value that subtypes every subtype of Int.  
+It would naturally come up in the signature of things like:
+```
+bar () = if bar() then bar() else bar()
+bar: () -> 'R  where 'R <: Bool
+```
+Type `'R` has a `Bool` constraint so it must adopt the same memory represenation (it must be in the `Bool` lattice), so we add the implicit bound `R :> No Bool`, which is its only lower bound and it is covariant, so we can replacing it with `No Bool`:
+```
+bar: () -> No Bool
+```
+
+So, in the example above, we could have had:
+```
+foo: () -> List (No 'U)
+```
+Although it does not really simplify the type expression, so we should probably just stick to `() -> List 'T`.
+
 
 
 ### Note: Particular Case of First-Order Values
@@ -138,73 +157,73 @@ id x = x
 id: 'X -> 'X
 foo id: (Int, Str)
 
-foo(x => x): (Int, Str)  // does this really work? is abstraction generalized as a subexpression? <- at least not in traditional HM (why not?)
+foo(x => x): (Int, Str)  // unification failure
 ```
+The last example could be made to work if our HM generalizes abstractions as if they were let-bound (which is useless to do in standard HM because there is no first-class polymorphism nor operation types).
 
-However, I expect that it will be useful to be have actual first-class polymorphic functions (although I have a hard time finding any good example).
+However, I expect that it may still be useful to have actual first-class polymorphic functions (although I have a hard time finding any good example).
 To define them, we use explicit type quantification (ie: type lambdas in value world)
 
 ```
-foo f = (app f 0, app f "ok")  // error: cannot unify Int(0) and Str("ok") -- `app` forces interpretation as function types
+foo f = (app f 0, app f "ok")  // error: cannot unify Int(0) and Str("ok")
+                               // -- `app f` forces interpretation of `f` as a function type
 
 foo = (f: X => X -> X) => (f 0, f "ok")
 foo: (X => X -> X) -> (Int, Str)
 ```
 
-Here is a better example. The following function is not typeable using let-polymorphism alone:
+If we want the passed function to have effects (which would give some sense to the example), we have to add it to the argument function's type (and it is sufficient to have let-polymorphism for the effect even if the passed function will have dependent effects; the effect type used will be the unification of those):
 ```
-register x =
-| (a,b) => register a; register b
-| _ => log(toString x)
-```
-
-
-say we assume let-polym by default
-can provide only partial specs for where fcp is needed/actually occurs
-
-
-
-```
-register[T: (_:Show, _:Show) | (_:Show)] (x: T) =
-| (a,b) => register a; register b
-| _ => log(toString x)
-
-register: T ('A: Show, 'B: Show) | ('C: Show) => 
+foo = (f: X => X -> X ! _) => (f 0, f "ok")
+foo: (X => X -> X ! 'E) -> (Int, Str) ! 'E
 ```
 
-Notice that we did not give a return type 
-
+**Note**: even the following work:
 ```
-Reg = RegBase | (Reg, Reg)
-RegBase = 
+applyAll fls = fls .map (f => (f 0, f "ok"))
+applyAll: 'Fls -> 'Fls .map ('F -> 'F.app Int, 'F.app Str)
+// or
+applyAll (fls: 'F.List) = fls .map (f => (f 0, f "ok"))
+applyAll: 'F.List -> ('F.app Int, 'F.app Str).List
 
-register: ('X: ) -> ()
+applyAll id                // ok, has type (Int,Str).List
+applyAll(x => x)           // unification error (unless we generalize lambdas)
+applyAll(X => (x:X) => x)  // ok (uses first-class polymorphism)
+```
+Indeed, `(X => (x:X) => x)` has first-class polymorphic type `X => X -> X`.
+
+The following fails, because it tries to require fls to contain functions all of the same type `'A -> 'B`, whereas it should contain first-class polymorphic functions:
+```
+applyAll (fls: ('A -> 'B).List) = fls .map (f => (f 0, f "ok")) // unification error
 ```
 
-
+So, first-class polymorphism may be useful, but is still not necessary in most cases.
 
 
 
 
 ## Miscellaneous Niceties
 
-Bounds on types can be added on the fly:
+Concept bounds on types can be added on the fly:
 ```
 foo (x: 'T: Show) = print x.show
 // or
 foo (x: _: Show) = print x.show
 // or
 foo (x::Show) = print x.show  // not sure will keep this syntax, :: is useful for scope access syntax
+
+foo: 'T -> ()  where 'T: Show
 ```
 
-There is always the less convenient but sometimes required:
+There is always the less convenient--but sometimes required--explicit `where` clause:
 ```
 foo (x: 'T) = print x.show
 where 'T: Show
 ```
 
-It is possible to define types that contain free type variables that will be unified later:
+It is possible to define "floating"  types, that contain free type variables that will be unified later:
 ```
+// Assuming we have RefTo: * -> @ -> *
 Ref T = T.RefTo 'R
 // or
 Ref T = T.RefTo _
@@ -216,7 +235,7 @@ foo (ls: List.List) = ls.flatten
 foo: (List 'T).List -> List 'T
 ```
 
-(I don't think we're really losing anything by allowing this shortcut.)
+(I don't think we're really losing anything by allowing this shortcut; there is almost no case where you'd actually want to type a value with the first-class polymorphic type `T => List T`.)
 
 
 
