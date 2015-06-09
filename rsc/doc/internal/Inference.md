@@ -25,9 +25,9 @@ id x = x
 id: 'X -> 'X
 
 foo a = id a
-foo: 'A -> 'X  // new type variable X comes from instantiating 'id'
+foo: 'A -> 'X  // new type variable 'X comes from instantiating `id`
 where
-	'A <: 'X   // because A is used as arg in fun of type X -> X
+	'A <: 'X   // because 'A is used as arg in fun of type 'X -> 'X
 ```
 
 Here, `'X` is only used in covariant position (the function output), so we can replace it with its lower bound `'A`, and we obtain:
@@ -99,7 +99,7 @@ foo: () -> List Nothing  // Nothing is the "Bottom" of the type lattice
 
 **EDIT**: This example is probably not well-chosen; in Seagl, types need well-defined sizes, and the size of `List T` depends on the size of `T` (unless it is stored externally, which should not be the case for lists). So there is no actual well-defined  `List Nothing` type. However, the reasoning still holds when applied to things like regions and erased types (which are all the same size since allocated externally), where we truly have subtyping. The bottom element for regions is the empty region, but there is no top (but maybe we could introduce one).
 
-**Note**: It could be interesting to define a bottom for every type lattice, namely `No: * -> *`. For example, we have `No Int <: 42, `No Int <: 666, `No Int <: Int`; it has the mem repr of an `Int`, but it is an "impossible" value that subtypes every subtype of Int.  
+**Note**: It could be interesting to define a bottom for every type lattice, namely `No: * -> *`. For example, we have `No Int <: 42`, `No Int <: 666`, `No Int <: Int`; it has the mem repr of an `Int`, but it is an "impossible" value that subtypes every subtype of Int.  
 It would naturally come up in the signature of things like:
 ```
 bar () = if bar() then bar() else bar()
@@ -120,7 +120,7 @@ Although it does not really simplify the type expression, so we should probably 
 
 ### Note: Particular Case of First-Order Values
 
-For values that are not functions, since value world is strict, we can't leave it with a higher-order type, so unless we can simplify the type to remove all free variables (like in `foo` above), we are left with an *unconstrained* type, that may be unified in the future with no more than one type.
+For values that are not functions (values said to be *expansive*), since value world is strict, we can't leave it with a polymorphic type, so unless we can simplify the type to remove all free variables (like in `foo` above), we are left with an *unconstrained* type, that may be unified in the future with no more than one type.
 
 OCaml does a similar thing:  
 Since `list` is covariant, we can keep the polymorphic definition `foo` with generic type `'a`, even though `foo` is not a function:
