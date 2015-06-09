@@ -18,6 +18,11 @@ We also have `A <: A|B`, which means that we can coerce any value of type `A` to
 
 ## Pattern-Matching
 
+Pattern-matching is intrinsinc in the lambda notation of Seagl. For convenience, we give the following definition:
+```
+match x f = f x
+```
+
 Assume the following usual definition of `List`:
 ```
 Nil    = object
