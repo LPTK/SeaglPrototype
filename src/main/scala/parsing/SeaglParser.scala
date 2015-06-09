@@ -9,8 +9,11 @@ import scala.util.parsing.input.Positional
 import scala.util.parsing.input.NoPosition
 
 object SeaglParser {
-  abstract class ParserTemplate[T <: Ast.TermsTemplate](val t: T) extends StandardTokenParsers {
+  // DT: dual type
+  abstract class ParserTemplate[T <: Ast.TermsTemplate, DT <: Ast.TermsTemplate](val t: T, val dt: DT) extends StandardTokenParsers {
     lexical.delimiters ++= List("=", "=>", "{", "}", "(", ")", ";")
+
+    def dualParser: ParserTemplate[DT, T]
 
     def termToNode: t.Term => Position => t.Node
     def ptermToNode: PosTerm[t.Term] => t.Node = x => termToNode(x.term)(x.pos)
@@ -58,13 +61,17 @@ object SeaglParser {
     def block = "{" ~> internal_block <~ "}"
   }
 
-  object TermParser extends ParserTemplate(Ast.values) {
+  object TermParser extends ParserTemplate(Ast.values, Ast.types) {
+    def dualParser = TypeParser
+
     def termToNode = { x: t.Term => pos: Position => Ast.Node(x, SourceCode(pos)) }
 
     def strToId = VId.apply
   }
 
-  object TypeParser extends ParserTemplate(Ast.types) {
+  object TypeParser extends ParserTemplate(Ast.types, Ast.values) {
+    def dualParser = TermParser
+
     def termToNode = { x: t.Term => pos: Position => Ast.Node(x, SourceCode(pos)) }
 
     def strToId = TId.apply

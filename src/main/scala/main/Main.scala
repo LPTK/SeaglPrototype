@@ -17,6 +17,8 @@ object Main extends App {
 
     println(line)
 
+    // TODO: better handling of the parsed value
+
   }
 
 }
