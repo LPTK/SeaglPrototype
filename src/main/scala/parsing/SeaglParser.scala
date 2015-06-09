@@ -10,7 +10,7 @@ import scala.util.parsing.input.NoPosition
 
 object SeaglParser {
   abstract class ParserTemplate[T <: Ast.TermsTemplate](val t: T) extends StandardTokenParsers {
-    lexical.delimiters ++= List("=", "=>", "{", "}", ";")
+    lexical.delimiters ++= List("=", "=>", "{", "}", "(", ")", ";")
 
     def termToNode: t.Term => Position => t.Node
     def ptermToNode: PosTerm[t.Term] => t.Node = x => termToNode(x.term)(x.pos)
@@ -36,8 +36,9 @@ object SeaglParser {
 
     // TODO: The following code is pretty messy, it needs some refactoring and cleaning
 
-    // TODO: remove semicolons
-    def definition = ident ~ /* (pattern*) ~*/ ("=" ~> (withPos(term)) <~ ";") ^^
+    // TODO (long term): remove semicolons in the syntax
+
+    def definition = ident ~ /* (pattern*) ~*/ ("=" ~> (withPos(term))) ^^
       {
         case id ~ expr => t.Let(new t.Symbol(strToId(id)), ptermToScoped(expr))
       }
@@ -46,10 +47,10 @@ object SeaglParser {
 
     def term: Parser[t.Term] = pattern | lambda
 
-    def lambda: Parser[t.Term] = ("{" ~> withPos(id)) ~ ("=>" ~> withPos(term) <~ "}") ^^
+    def lambda: Parser[t.Term] = ("(" ~> withPos(id)) ~ ("=>" ~> withPos(term) <~ ")") ^^
       { case nm ~ e => t.Lambda(t.Extract(ptermToNode(nm)), ptermToScoped(e)) }
 
-    def termOrDef = definition | term
+    def termOrDef = (definition <~ ";") | (term <~ ";")
 
     // Block without delimiters
     def internal_block: Parser[t.Block] = (termOrDef*) ^^ (l => t.Block(l))

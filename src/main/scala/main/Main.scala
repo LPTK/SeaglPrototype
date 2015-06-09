@@ -9,9 +9,14 @@ object Main extends App {
 
   println("Parsing...");
 
-  // Internal block because we don't want to type delimiters at top level
-  val line = TermParser.internal_block(new TermParser.lexical.Scanner(readLine()))
+  while (true) {
+    print("> ")
 
-  println(line)
+    // Internal block because we don't want to type delimiters at top level
+    val line = TermParser.internal_block(new TermParser.lexical.Scanner(readLine()))
+
+    println(line)
+
+  }
 
 }
