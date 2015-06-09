@@ -2,14 +2,14 @@ package front
 
 import utils._
 import common._
-
 import Printable._
+import scala.collection.Seq
 
 trait Terms {
   stage: Stage =>
 
   sealed trait GeneralTerm
-  
+
   /** Marks whether the node introduces its own new scope or not */
   trait ScopingNode
 
@@ -20,7 +20,7 @@ trait Terms {
 
     type Node
     type Kind // TODO rm: not used/useful?
-//    type Sym
+    //    type Sym
     type TermId
 
     //    sealed trait Stmt extends Printable
@@ -37,11 +37,17 @@ trait Terms {
       case Unit()       => p"()"
       case Literal(v)   => p"${v.toString}"
       case Ref(s)       => p"${s.toString}"
-      case Let(s, v, b) => p"${s.toString} = ${v.node}; $b"
+      case Let(s, v)    => p"${s.toString} = ${v.node}; "
       case Lambda(a, b) => p"${a.toString} => ${b.node}" // FIXME rm toString
       case App(f, a)    => p"$f $a"
       case DepApp(f, a) => p"$f[${a.toString}]"
+      case Block(es)    => es.print
+      case Scoped(n)    => p"$n"
       //        case Ascribe(v, t) => p"$v: ${t.toString}"
+    }
+
+    implicit val termSeqPrintable: Printable[Seq[Scoped]] = Printable {
+      s => s.foldLeft("")((pref: String, t: Term) => pref + t.print)
     }
 
     sealed trait ValueTerm extends GeneralTerm
@@ -62,14 +68,16 @@ trait Terms {
     type Arg = Extract[Node] // FIXME: question: is Extraction really part of the core language?! (can be encoded using express)
     case class Lambda(arg: Arg, body: Scoped) extends Term with ScopingNode
 
-    case class Let(sym: Symbol, value: Scoped, body: Node) extends Term with ScopingNode
+    case class Let(sym: Symbol, value: Scoped) extends Term with ScopingNode
 
     //    case class Dual(t: dualWorld.Term) extends Term
     //    case class Dependent(dep: dualWorld.Node, body: Node) extends Term
     case class DepApp(fun: Node, darg: dualWorld.Node) extends Term
 
+    case class Block(exprs: Seq[Scoped]) extends Term
+
     case class Scoped(node: Node) extends Term with ScopingNode
-    
+
     //    case class Ascribe(v: Node, t: dualWorld.Node) extends ValueTerm
     case class Ascribe(v: ValueNode, t: TypeNode) extends ValueTerm
 
@@ -85,15 +93,12 @@ trait Terms {
       protected[front] def scope(sc: Scope) =
         if (_enclosingScope.isDefined) throw new Error("Symbol's scope already defined") // TODO
         else _enclosingScope = Some(sc)
-      
+
       def enclosingScope = _enclosingScope.get
       def apply() = ??? // TODO
     }
-    
-    
-    
+
   }
-  
 
   sealed trait TypeKind
   case object StarKind extends TypeKind
@@ -106,7 +111,7 @@ trait Terms {
 
     type Node = TypeNode //Term
     type Kind = TypeKind
-//    type Sym = TypSym
+    //    type Sym = TypSym
     type TermId = TId
 
     implicit val nodePrintable: Printable[Node] = stage.typeNodePrintable
@@ -117,7 +122,7 @@ trait Terms {
 
     type Node = ValueNode
     type Kind = Type
-//    type Sym = ValSym
+    //    type Sym = ValSym
     type TermId = VId
 
     implicit val nodePrintable: Printable[Node] = stage.valueNodePrintable
@@ -128,16 +133,8 @@ trait Terms {
 
   type TypeSymbol = types.Symbol
   type ValueSymbol = values.Symbol
-//  val TypeSymbol = types.Symbol
-//  val ValueSymbol = values.Symbol
-  
+  //  val TypeSymbol = types.Symbol
+  //  val ValueSymbol = values.Symbol
+
 }
-
-
-
-
-
-
-
-
 

@@ -21,6 +21,7 @@ object Printable {
   implicit val strPrintable = new Printable[Str] {
     def print(x: Str)(implicit po: PrintOptions) = x
   }
+
   implicit def toDoc[T: Printable](x: T): Doc = new Doc((implicitly[Printable[T]] print x)())
 }
 
