@@ -34,11 +34,12 @@ abstract case class StageConverter[A <: Stage, B <: Stage](a: A, b: B) {
     {
       import tta._
       x match {
+        case Unit()                            => ttb.Unit()
         case Literal(v)                        => ttb.Literal(v)
         case Ref(s)                            => ttb.Ref(syms(s))
         case App(f, a)                         => ttb.App(nods(f), nods(a))
         case Lambda(Extract(t), tta.Scoped(b)) => ttb.Lambda(ttb.Extract(nods(t)), ttb.Scoped(nods(b)))
-        case Let(s, tta.Scoped(v), b)          => ttb.Let(syms(s), ttb.Scoped(nods(v)), nods(b))
+        case Let(s, tta.Scoped(v))             => ttb.Let(syms(s), ttb.Scoped(nods(v)))
       }
     }
   def processVal(x: a.Value)(implicit c: Ctx): Value = (x: @unchecked) match {

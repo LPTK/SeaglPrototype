@@ -14,6 +14,7 @@ object SeaglParser {
 
     def termToNode: t.Term => Position => t.Node
     def ptermToNode: PosTerm[t.Term] => t.Node = x => termToNode(x.term)(x.pos)
+    def ptermToScoped: PosTerm[t.Term] => t.Scoped = t.Scoped compose ptermToNode
 
     // Great idea: this Positional trait sh*t mixed with a sealed term trait
     // Would be much easier if instead of a Positional token, positioned returned a pair (token, pos)
@@ -33,21 +34,25 @@ object SeaglParser {
 
     def id = ident ^^ { l => t.Literal(l) }
 
+    // TODO: The following code is pretty messy, it needs some refactoring and cleaning
+
     // TODO: remove semicolons
-    def definition = ident ~ /* (pattern*) ~*/ ("=" ~> (withPos(expression)) <~ ";") ^^
+    def definition = ident ~ /* (pattern*) ~*/ ("=" ~> (withPos(term)) <~ ";") ^^
       {
-        case id ~ expr => t.Let(new t.Symbol(strToId(id)), t.Scoped(ptermToNode(expr)),
-          termToNode(t.Unit())(NoPosition))
+        case id ~ expr => t.Let(new t.Symbol(strToId(id)), ptermToScoped(expr))
       }
 
-    def pattern = id
+    def pattern = id // | TODO
 
-    def expression: Parser[t.Term] = id | lambda
+    def term: Parser[t.Term] = pattern | lambda
 
-    def lambda: Parser[t.Term] = ("{" ~> withPos(id)) ~ ("=>" ~> withPos(expression) <~ "}") ^^
-      { case nm ~ e => t.Lambda(t.Extract(ptermToNode(nm)), t.Scoped(ptermToNode(e))) }
+    def lambda: Parser[t.Term] = ("{" ~> withPos(id)) ~ ("=>" ~> withPos(term) <~ "}") ^^
+      { case nm ~ e => t.Lambda(t.Extract(ptermToNode(nm)), ptermToScoped(e)) }
 
-    def program = definition
+    def termOrDef = definition | term
+
+    // TODO: Do we want delimiters around blocks? For now this only allows a top level block
+    def block: Parser[t.Block] = (withPos(termOrDef)*) ^^ (l => t.Block(l map ptermToScoped))
   }
 
   object TermParser extends ParserTemplate(Ast.values) {

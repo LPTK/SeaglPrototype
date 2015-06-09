@@ -8,8 +8,8 @@ import utils._
 object Main extends App {
 
   println("Parsing...");
-  val line = TermParser.program(new TermParser.lexical.Scanner(readLine()))
-  
+  val line = TermParser.block(new TermParser.lexical.Scanner(readLine()))
+
   println(line)
 
 }
