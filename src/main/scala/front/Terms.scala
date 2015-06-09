@@ -46,8 +46,12 @@ trait Terms {
       //        case Ascribe(v, t) => p"$v: ${t.toString}"
     }
 
-    implicit val termSeqPrintable: Printable[Seq[Term]] = Printable {
-      s => s.foldLeft("")((pref: String, t: Term) => pref + t.print)
+    implicit val termSeqPrintable: Printable[Seq[GeneralTerm]] = Printable {
+      s => s.foldLeft("")((pref: String, t: GeneralTerm) => pref + t.print)
+    }
+
+    implicit val genTermPrintable: Printable[GeneralTerm] = Printable {
+      case t: Term => t.print
     }
 
     sealed trait ValueTerm extends GeneralTerm
@@ -74,7 +78,7 @@ trait Terms {
     //    case class Dependent(dep: dualWorld.Node, body: Node) extends Term
     case class DepApp(fun: Node, darg: dualWorld.Node) extends Term
 
-    case class Block(exprs: Seq[Term]) extends Term with ScopingNode;
+    case class Block(exprs: Seq[GeneralTerm]) extends Term with ScopingNode;
 
     case class Scoped(node: Node) extends Term with ScopingNode
 

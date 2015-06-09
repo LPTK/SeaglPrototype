@@ -15,7 +15,7 @@ trait Stage extends Terms {
   type Scope
 
   implicit val valueNodePrintable: Printable[ValueNode]
-  implicit val typeNodePrintable: Printable[TypeNode] = Printable { _ => "??" } // TODO
+  implicit val typeNodePrintable: Printable[TypeNode]
 
 }
 
@@ -71,6 +71,10 @@ object Stages {
     implicit val valueNodePrintable: Printable[ValueNode] =
       // Kinda hacky but works, except for ascribe
       Printable { x => values.termPrintable.print(x match { case Node(t: values.Term, org) => t })() }
+
+    implicit val typeNodePrintable: Printable[TypeNode] =
+      // Kinda hacky but works, except for ascribe
+      Printable { x => types.termPrintable.print(x match { case Node(t: types.Term, org) => t })() }
   }
 
   //  trait ResolvedStage {
@@ -104,8 +108,8 @@ object Stages {
     type TypeSpec = N
 
     val valueNodePrintable: Printable[ValueNode] = Printable { _ => "()" }
+    val typeNodePrintable: Printable[TypeNode] = Printable { _ => "()" }
 
   }
 
 }
-
