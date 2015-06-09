@@ -51,8 +51,10 @@ object SeaglParser {
 
     def termOrDef = definition | term
 
-    // TODO: Do we want delimiters around blocks? For now this only allows a top level block
-    def block: Parser[t.Block] = (withPos(termOrDef)*) ^^ (l => t.Block(l map ptermToScoped))
+    // Block without delimiters
+    def internal_block: Parser[t.Block] = (termOrDef*) ^^ (l => t.Block(l))
+
+    def block = "{" ~> internal_block <~ "}"
   }
 
   object TermParser extends ParserTemplate(Ast.values) {

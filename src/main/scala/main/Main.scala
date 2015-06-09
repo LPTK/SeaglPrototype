@@ -8,7 +8,9 @@ import utils._
 object Main extends App {
 
   println("Parsing...");
-  val line = TermParser.block(new TermParser.lexical.Scanner(readLine()))
+
+  // Internal block because we don't want to type delimiters at top level
+  val line = TermParser.internal_block(new TermParser.lexical.Scanner(readLine()))
 
   println(line)
 

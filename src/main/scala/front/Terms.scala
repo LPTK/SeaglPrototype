@@ -34,19 +34,19 @@ trait Terms {
       Printable { ext => "`" + ext.x.print }
     /** TODO handle right parenthezsisaztion */
     implicit val termPrintable: Printable[Term] = Printable {
-      case Unit()       => p"()"
-      case Literal(v)   => p"${v.toString}"
-      case Ref(s)       => p"${s.toString}"
-      case Let(s, v)    => p"${s.toString} = ${v.node}; "
+      case Unit() => p"()"
+      case Literal(v) => p"${v.toString}"
+      case Ref(s) => p"${s.toString}"
+      case Let(s, v) => p"${s.toString} = ${v.node}; "
       case Lambda(a, b) => p"${a.toString} => ${b.node}" // FIXME rm toString
-      case App(f, a)    => p"$f $a"
+      case App(f, a) => p"$f $a"
       case DepApp(f, a) => p"$f[${a.toString}]"
-      case Block(es)    => es.print
-      case Scoped(n)    => p"$n"
+      case Block(es) => es.print
+      case Scoped(n) => p"$n"
       //        case Ascribe(v, t) => p"$v: ${t.toString}"
     }
 
-    implicit val termSeqPrintable: Printable[Seq[Scoped]] = Printable {
+    implicit val termSeqPrintable: Printable[Seq[Term]] = Printable {
       s => s.foldLeft("")((pref: String, t: Term) => pref + t.print)
     }
 
@@ -74,7 +74,7 @@ trait Terms {
     //    case class Dependent(dep: dualWorld.Node, body: Node) extends Term
     case class DepApp(fun: Node, darg: dualWorld.Node) extends Term
 
-    case class Block(exprs: Seq[Scoped]) extends Term
+    case class Block(exprs: Seq[Term]) extends Term with ScopingNode;
 
     case class Scoped(node: Node) extends Term with ScopingNode
 
@@ -137,4 +137,3 @@ trait Terms {
   //  val ValueSymbol = values.Symbol
 
 }
-
