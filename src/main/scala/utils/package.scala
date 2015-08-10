@@ -52,6 +52,9 @@ package object utils {
     
   }
   
+  implicit class SymStrGet(val self: Sym) extends AnyVal {
+    def getStr = self match { case Symbol(name) => name }
+  }
   
 }
 
