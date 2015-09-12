@@ -1,9 +1,6 @@
 package main
 
 import parsing.SeaglParser._
-import scala.util.parsing.combinator._
-import scala.util.parsing.combinator.syntactical._
-import utils._
 import parsing.SeaglParser
 
 object Main extends App {
