@@ -20,7 +20,10 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   "parsing id" should "work" in {
     // Note: Starting with an indent is wrong, eg: " a"
     
-    tests("a" -> Id('a), "a " -> Id('a))
+//    tests("a" -> Id('a), "a " -> Id('a))
+    tests(
+      Seq("a", "a ", "a  ", "a--\n", "a -- ,.;'[(\n") -> 'a.id
+    )
     
   }
   
@@ -59,6 +62,9 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   
   "parsing blocks" should "work" in tests(
   
+    Seq("a\n  x = b\n  x a", "a(\n x = b\n x a)") -> App('a, Block(Let('x, 'b)::Nil, App('x, 'a)))
+  
+  
   )
   
   
@@ -79,7 +85,11 @@ class ParserTests extends FlatSpec with ShouldMatchers {
       "a b =>\n  c d",
       "(a\n  b) => c d",
       "a  b => c\n  d"
-    ) -> Lambda(App('a, 'b) -> App('c, 'd) :: Nil)
+    ) -> Lambda(App('a, 'b) -> App('c, 'd) :: Nil),
+  
+    Seq(
+      "a =>\n  b\n  c"
+    ) -> Lambda('a.id -> Block('b :: Nil, 'c))
   
   )
   
@@ -87,6 +97,19 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     val lsmap = App(OpApp('ls, map), Lambda('a.id -> 'b.id :: 'c.id -> 'd.id :: Nil))
     
 tests(
+
+//Seq("""
+//foo =
+//| b => bar =
+//  | d => e
+//""") -> Lambda('b.id -> Lambda('d.id -> 'e.id)),
+
+Seq("""
+a
+| b => c
+  | d => e
+""") -> App('a, Lambda('b.id -> App('c, Lambda('d.id -> 'e.id)))),
+
 Seq("""
 ls.map
 | a => b
@@ -120,20 +143,59 @@ foo
   }
   
   
-  def test(str: Str, expected: Stmt) = parse(str) match {
+  
+  "parsing lets" should "work" in tests(
+    
+    Seq("a = b", "a =\n  b") -> Let('a, 'b),
+  
+    Seq("a = b => c | d => e","""
+a =
+| b => c
+| d => e
+""") -> Let('a, Lambda('b.id -> 'c.id, 'd.id -> 'e.id))
+  
+  )
+  
+  
+  def test(str: Str, expected: Stmt) = parse(str, repl) match {
     case Success(t, _) => assert(t == expected)
     case r @ NoSuccess(err, _) =>
       println(r)
       throw new Exception("Failure: "+err)
   }
-  def tests(pairs: TestCase*) = pairs foreach {
-    case s: Single => (test _).tupled(s.pair)
-    case m: Multi => m.pairs._1 foreach (test(_, m.pairs._2))
+//  def tests(pairs: TestCase*) = {
+//    var i = 0;
+//    pairs foreach {p => (try p match {
+//      case s: Single => (test _).tupled(s.pair)
+//      case m: Multi => m.pairs._1 foreach (test(_, m.pairs._2))
+//    } catch {
+//      case e: Throwable =>
+//        System.err.println(s"Test no.$i failed: "+p) //.pair._1)
+//        throw e
+//    }) oh_and (i += 1)}
+//  }
+  def tests(pairs: TestCase*) = {
+    pairs foreach {
+      case s: Single => try ((test _).tupled(s.pair)) catch {
+        case e: Throwable =>
+          System.err.println(s"Test failed: "+s.pair)
+          throw e
+      }
+      case m: Multi => m.pairs._1 foreach (p => try test(p, m.pairs._2) catch {
+        case e: Throwable =>
+          System.err.println(s"Test failed: "+p)
+          throw e
+      })
+    }
   }
   
   sealed trait TestCase
-  implicit class Single(val pair: (Str, Stmt)) extends TestCase
-  implicit class Multi(val pairs: (Seq[Str], Stmt)) extends TestCase
+  implicit class Single(val pair: (Str, Stmt)) extends TestCase {
+    override def toString = pair.toString
+  }
+  implicit class Multi(val pairs: (Seq[Str], Stmt)) extends TestCase {
+    override def toString = pairs.toString
+  }
   
   implicit class idable(s: Sym) {
     def id = Id(s)

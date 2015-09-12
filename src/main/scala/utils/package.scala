@@ -40,6 +40,10 @@ package object utils {
     {before; f} oh_and after
   
   
+  implicit class PredNeg[T](f: T => Boolean) {
+    def unary_! : T => Boolean = !f(_)
+  }
+  
   
   implicit class TypeSafeEquatable[T](private val value : T) extends AnyVal {
     def ===[U >: T <: T] (that: U) = value == that
