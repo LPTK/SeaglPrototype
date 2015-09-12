@@ -39,14 +39,14 @@ class Lexer extends Lexical {
 //    elem("any but", ch => !(chs contains ch))
     elem("any but "+(chs map (_.toInt) mkString ","), !chs.toSet)
   
-  val keychars = Set('(', ')', '.', ';', '|','=')
+  val keychars = Set('(', ')', '.', ';', '|', '=')
 
 //  def whitespace: Parser[Null] = Parser(in => Success(null, in))
   def whitespace: Parser[Any] = rep(('-' ~ '-' | '/' ~ '/') ~ anyBut('\n').* ~ '\n')
 //  def whitespace: Parser[Any] = rep(('-' ~ '-' | '/' ~ '/') ~ anyBut('\n', EofCh).* ~ (accept(EofCh) | '\n'))
   
   /** Characters in operators */
-  def opChar = elem("opchar", ch => !ch.isLetterOrDigit && ch != ' ' && !keychars(ch))
+  def opChar = elem("opchar", ch => !ch.isLetterOrDigit && ch != ' ' && !keychars(ch) && ch != '\n')
 
   def token: Parser[Token] = (
 //      ('-' ~ '-' | '/' ~ '/') ~ anyBut('\n').* ~ '\n' ^^^ Space(0)

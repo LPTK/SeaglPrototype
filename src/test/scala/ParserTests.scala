@@ -52,11 +52,24 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     Seq("a b+ c", "a (b+) c", "a(b +)c") -> App(App('a, OpApp('b, plus)), 'c)
     
   )
-    
+  
+  val apb_pc = App(OpApp(App(OpApp('a, plus), 'b), plus), 'c)
+  val ap_bpc = App(OpApp('a, plus), App(OpApp('b, plus), 'c))
+  
   "parsing operator app" should "work" in tests(
     
-    Seq("a + b", "a+ b", "a+b") -> App(OpApp('a, plus), 'b),
-    Seq("a .foo b", "a.foo b", "a.foo(b)", "(a.foo) b", "(a .foo)b") -> App(OpApp('a, foo), 'b)
+    Seq("a + b", "a+ b", "a+b", "a\n +b", "a\n + b") -> App(OpApp('a, plus), 'b),
+    Seq("a .foo b", "a.foo b", "a.foo(b)", "(a.foo) b", "(a .foo)b") -> App(OpApp('a, foo), 'b),
+  
+    Seq("a+b+c", "a+ b+ c", "a + b + c", "a \n + b\n  +c") -> apb_pc
+    
+  )
+  
+  "parsing newline operators" should "work" in tests(
+  
+    Seq("a + b + c", "a\n + b\n + c", "a\n +b\n +c") -> apb_pc,
+  
+    Seq("a + b+c", "a\n + b\n  + c") -> ap_bpc
     
   )
   
