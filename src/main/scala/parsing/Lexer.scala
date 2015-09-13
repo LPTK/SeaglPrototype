@@ -11,6 +11,8 @@ import utils._
  * TODO right-associative ops/methods
  *   ie: -.1, 42 :. ls, 42 add.ls
  * 
+ * TODO numbers, string lits, tags (identifiers)
+ * 
  * 
  */
 class Lexer extends Lexical {

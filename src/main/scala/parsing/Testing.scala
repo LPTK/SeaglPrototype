@@ -230,8 +230,43 @@ Examples:
     .else
       print "oops"
       "rejected"
+      
+  //Not sure it's a good idea, but for "else" we could have something like:  
+  
+  p.age >= 18 ? "accepted" !? "rejected"
+  p.age >= 18 ?
+      "accepted"
+    !?                     -- it's less legible
+      "rejected"
 
 
+
+  // Yet another way (could be used along with the previous one)
+  
+  if cond (then: -> _) (else: -> _) = cond >>
+  | `True  => then
+  | `False => else
+  else = id
+  
+  // Note: smarter def for `if`:
+  if cond (then: -> _) (else: -> _) = cond.fold then else
+  
+  // Usages:
+  
+  if (p.age >= 18) "accepted" "rejected"
+  
+  if p.age >= 18
+      "accepted"
+    else
+      "rejected"
+      
+  // Not very nice syntax -- to avoid:
+  if p.age >= 18
+      "accepted"
+    "rejected"  
+  
+  // Note: can be a disadvantage that else is the identity; giving it a special type may enhance user experience, even
+  // if we can't use `if c t e` directly anymore, but rather `if c t e.else`
 
 
 

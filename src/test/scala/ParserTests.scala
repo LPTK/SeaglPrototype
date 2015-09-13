@@ -251,6 +251,8 @@ Operators by themselves...
       + permits nice paren-less separation of expressions
           Person "John" 42 register. db
       ++ it's both the OCaml and Haskell way, so I should probably pick this way for consistency with the ML family
+      + it actually allows nice ITE syntaxes
+          x > 0 ? "ok" .else "ko"
     Cons:
       - it may seem inconsistent when methods are viewed as functions..
           db.register Person "John" 42
