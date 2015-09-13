@@ -2,12 +2,18 @@ package parsing
 
 import scala.io.StdIn._
 
+import utils._
 
 //object QuickTest extends App {println(Parser.parse("a"))}
 
 //object QuickTest extends App {println(Parser.parse("a => b | c => d"))}
 
-object QuickTest extends App {println(Parser.parse("a -- dsgvd,.;'\n\n", Parser.repl))}
+object QuickTest extends App {
+  println(Parser.parse("a+b+c"))
+  println(Parser.parse("a +b"))
+}
+
+//object QuickTest extends App {println(Parser.parse("a -- dsgvd,.;'\n\n", Parser.repl))}
 //object QuickTest extends App {println(Parser.parse("a -- dsgvd,.;'", Parser.repl))}
 
 //object QuickTest extends App {println(Parser.parse("""
@@ -33,13 +39,25 @@ object ParserREPL extends App {
   while (true) {
     print("> ")
   
-    val line = readLine()
+//    val line = readLine()
+//  
+//    // Internal block because we don't want to type delimiters at top level
+//    val pgrm = Parser.pgrm(new Parser.lexical.Scanner(line))
+//  
+//    println(pgrm)
   
-    // Internal block because we don't want to type delimiters at top level
-    val pgrm = Parser.pgrm(new Parser.lexical.Scanner(line))
-  
+    val pre = "| "
+    
+//    val code = Iterate continually readLine takeWhile (_.nonEmpty) mkString "\n"
+    val code = Iterate(readLine()) ++ (Iterate continually {print(pre); System.out.flush(); readLine()}
+      takeWhile (_.nonEmpty)) mkString "\n"
+    
+    val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code))
+    
+    print("\b" * pre.length) // delete the last characters ("| ") -- doesn't seem to work on mac/idea 
     println(pgrm)
-  
+    
+    
     // TODO: better handling of the parsed value
   
   }

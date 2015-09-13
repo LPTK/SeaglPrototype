@@ -12,11 +12,29 @@ import utils._
  *    c
  *    d
  * 
+ * 
  * FIXME:
-> a + b + c
-[1.10] parsed: (((a +) (b +)) c)
-> a+b+c
-[1.6] parsed: (((a +) (b +)) c)
+
+> a +b
+[1.5] parsed: ((a +) b)
+> a b +c
+[1.7] parsed: ((a (b +)) c)
+ 
+> a b .foo
+[1.9] parsed: (a (b .foo))
+> a b + c
+[1.8] parsed: (a ((b +) c))
+
+ -- not sure if a problem:
+> map
+|  ls
+|   f
+[3.4] parsed: (map (ls f))
+> a
+|  +b
+|   +c
+[3.5] parsed: ((a +) ((b +) c))
+
  *
  */
 object Parser extends TokenParsers {
@@ -61,9 +79,9 @@ object Parser extends TokenParsers {
   
   def air[T](p: Parser[T]) = space.? ~> p <~ space.?
   
-  def lambda(st: State): Parser[Lambda] = (
+  def lambda(st: State): Parser[Lambda] = "lambda" !!! (
     (/*air("|").? ~>*/ rep1sep(lambdaBranch(st), air("|")) ^^ Lambda.apply)
-  | (newLine /*| guard("|")*/) ~> indented(st, lambdaBlock, st.inLambda)
+  | (newLine /*| guard("|")*/) ~> indented(st, lambdaBlock, strict = st.inLambda)
   )
   
   def lambdaBranch(st: State): Parser[(Term, Term)] = (term(st, false) <~ air("=>")) ~ genTerm(st) ^^ {
@@ -84,13 +102,22 @@ object Parser extends TokenParsers {
   
 //  def parens()
   
-  def compactTerm(st: State, multiLine: Bool): Parser[Term] = rep1(
-    subTerm(st, multiLine) ~ rep1(operator) ^^ { case t ~ ops => ops.foldLeft(t)(OpApp) }
-  | operator ~ compactTerm(st, multiLine) ^^ { case op ~ t => App(OpTerm(op), t) } // FIXME wrong
+//  def ReduceOps(p: Parser[Term ~ List[Term ~ Option[Operator]]]): Term = p match {
+  def ReduceOps(p: Term ~ List[Operator ~ Option[Term]]): Term = p match {
+    case t ~ ops_ts => ops_ts.foldLeft(t) {
+      case (tacc, op ~ None) => OpAppL(tacc, op)
+      case (tacc, op ~ Some(t2)) => App(OpAppL(tacc, op), t2)
+    }
+  }
+  
+  def compactTerm(st: State, multiLine: Bool): Parser[Term] = "compTerm" !!! rep1(
+//    subTerm(st, multiLine) ~ rep1(operator) ^^ { case t ~ ops => ops.foldLeft(t)(OpAppL) }
+    subTerm(st, multiLine) ~ rep1(operator ~ subTerm(st, multiLine).?) ^^ ReduceOps
+  | operator ~ compactTerm(st, multiLine) ^^ { case op ~ t => OpAppR(op, t) } // allow ops without term?
   | subTerm(st, multiLine)
   ) ^^ { _ reduceLeft App }
   
-  def subTerm(st: State, multiLine: Bool): Parser[Term] = rep1(
+  def subTerm(st: State, multiLine: Bool): Parser[Term] = "subTerm" !!! rep1(
     symbol ^^ Id
   | ("(" ~> space.? ~> genTerm(State(0, false)) <~ space.? <~ ")") // TODO ( + newline ... TODO not 0
   | ("(" ~> space.? ~> operator <~ space.? <~ ")") ^^ OpTerm
@@ -100,11 +127,21 @@ object Parser extends TokenParsers {
   ) ^^ { _ reduceLeft App }
   
   def term(st: State, multiLine: Bool): Parser[Term] = "term" !!! (rep1sep(
-      compactTerm(st, multiLine) ~ rep1(space ~> operator) ^^ { case t ~ ops => ops.foldLeft(t)(OpApp) }
-    | compactTerm(st, multiLine)
+//    compactTerm(st, multiLine) ~ rep1(space ~> operator) ^^ { case t ~ ops => ops.foldLeft(t)(OpAppL) }
+//    compactTerm(st, multiLine) ~ rep1(air(operator)) ~ compactTerm(st, multiLine).? ^^ {
+//      case t ~ ops ~ None => ops.foldLeft(t)(OpAppL)
+//      case t ~ ops ~ Some(t2) => App(ops.foldLeft(t)(OpAppL), t2)
+//    compactTerm(st, multiLine) ~ rep1(air(operator) ~ compactTerm(st, multiLine).?) ^^ {
+//      case t ~ ops_ts => ops_ts.foldLeft(t){
+//        case (tacc, op ~ None) => OpAppL(tacc, op)
+//        case (tacc, op ~ Some(t2)) => App(OpAppL(tacc, op), t2)
+//      }
+//    }
+    compactTerm(st, multiLine) ~ rep1(air(operator) ~ compactTerm(st, multiLine).?) ^^ ReduceOps
+  | compactTerm(st, multiLine)
   , space) <~ space.? ^^ { _ reduceLeft App })
   
-  def genTerm(st: State): Parser[Term] = rep1sep(
+  def genTerm(st: State): Parser[Term] = "genTerm" !!! rep1sep(
     lambda(st)
 //  | "nl op" !!! {(term(st, false) <~ newLine) ~ indented(st, n => air(operator) ~ genTerm(State(n, false, true)))} ^^ {
 //      case t1 ~ (op ~ t2) => App(OpApp(t1, op), t2)
@@ -113,14 +150,14 @@ object Parser extends TokenParsers {
       rep1sep((atIndent(n) ~> operator <~ space.?) ~ genTerm(State(n, false, true)) /*^^ {case a~b=>(a,b)}*/, newLine)
     )} ^^ {
 //      case t1 ~ (op ~ t2) => App(OpApp(t1, op), t2)
-      case t1 ~ op_ts => op_ts.foldLeft(t1){ case(tacc, op ~ t) => App(OpApp(tacc, op), t) }
+      case t1 ~ op_ts => op_ts.foldLeft(t1){ case(tacc, op ~ t) => App(OpAppL(tacc, op), t) }
     }
   | term(st, true)
   , space.?) <~ space.? ^^ { _ reduceLeft App }
   
   def stmt(st: State): Parser[Stmt] = "stmt" !!! (let(st) | genTerm(st))
   
-  def let(st: State): Parser[Stmt] = (term(st, false) <~ air("=")) ~ genTerm(st) ^^ {
+  def let(st: State): Parser[Stmt] = "let" !!! ((term(st, false) <~ air("=")) ~ genTerm(st)) ^^ {
     case a ~ b => Let(a, b)
   }
   
@@ -168,7 +205,7 @@ object Parser extends TokenParsers {
 //      t
 //    }
     def apply(in: Input): ParseResult[T] = {
-      trace(s"┌ trying $name on ${in.first} at ${in.pos} offset ${in.offset}")
+      trace(s"┌ $name   on ${in.first} at ${in.pos} offset ${in.offset}")
       ind += 1
       val t = parser.apply(in)
       ind -= 1
@@ -211,8 +248,11 @@ object AST {
   case class App(f: Term, a: Term) extends Term {
     def str = s"($f $a)"
   }
-  case class OpApp(t: Term, op: Lexer# Operator) extends Term {
+  case class OpAppL(t: Term, op: Lexer# Operator) extends Term {
     def str = s"($t ${op.chars})"
+  }
+  case class OpAppR(op: Lexer# Operator, t: Term) extends Term {
+    def str = s"(${op.chars} $t)"
   }
   case class OpTerm(op: Lexer# Operator) extends Term {
     def str = s"(${op.chars})"
@@ -225,7 +265,7 @@ object AST {
   }
   case class Block(stmts: List[Stmt], ret: Term) extends Term {
     def str =
-      if (stmts.size > 0) s"{${stmts mkString ";"}; $ret}"
+      if (stmts.nonEmpty) s"{${stmts mkString "; "}; $ret}"
       else ret.toString
   }
   object Block { def apply(lines: List[Stmt]): Term = lines match {

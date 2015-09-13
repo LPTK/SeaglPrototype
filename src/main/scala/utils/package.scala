@@ -17,6 +17,7 @@ package object utils {
   
   type =>? [A,B] = PartialFunction[A,B]
   
+  val Iterate = Iterator // Iterate continually 42 
   
   def wtf = throw new Exception("Unexpected program state reached")
   def wth(str: => Str) = throw new Exception(s"Unexpected program state reached: str")

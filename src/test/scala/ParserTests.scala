@@ -47,27 +47,29 @@ class ParserTests extends FlatSpec with ShouldMatchers {
 
   "parsing partial operator app" should "work" in tests(
     
-    Seq("a +", "a+", "(a+)") -> OpApp('a, plus),
-    Seq("a b+", "a (b+)", "a(b +)") -> App('a, OpApp('b, plus)),
-    Seq("a b+ c", "a (b+) c", "a(b +)c") -> App(App('a, OpApp('b, plus)), 'c)
+    Seq("a +", "a+", "(a+)") -> OpAppL('a, plus),
+    Seq("a b+", "a (b+)", "a(b +)") -> App('a, OpAppL('b, plus)),
+    Seq("a b+ c", "a (b+) c", "a(b +)c") -> App(App('a, OpAppL('b, plus)), 'c),
+  
+    Seq("a .foo +", "a.foo +", "a.foo+") -> OpAppL(OpAppL('a, foo), plus)
     
   )
   
-  val apb_pc = App(OpApp(App(OpApp('a, plus), 'b), plus), 'c)
-  val ap_bpc = App(OpApp('a, plus), App(OpApp('b, plus), 'c))
+  val apb_pc = App(OpAppL(App(OpAppL('a, plus), 'b), plus), 'c)
+  val ap_bpc = App(OpAppL('a, plus), App(OpAppL('b, plus), 'c))
   
   "parsing operator app" should "work" in tests(
     
-    Seq("a + b", "a+ b", "a+b", "a\n +b", "a\n + b") -> App(OpApp('a, plus), 'b),
-    Seq("a .foo b", "a.foo b", "a.foo(b)", "(a.foo) b", "(a .foo)b") -> App(OpApp('a, foo), 'b),
+    Seq("a + b", "a+ b", "a+b", "a\n +b", "a\n + b") -> App(OpAppL('a, plus), 'b),
+    Seq("a .foo b", "a.foo b", "a.foo(b)", "(a.foo) b", "(a .foo)b") -> App(OpAppL('a, foo), 'b),
   
-    Seq("a+b+c", "a+ b+ c", "a + b + c", "a \n + b\n  +c") -> apb_pc
+    Seq("a+b+c", "a+b + c", "a + b + c") -> apb_pc
     
   )
   
   "parsing newline operators" should "work" in tests(
   
-    Seq("a + b + c", "a\n + b\n + c", "a\n +b\n +c") -> apb_pc,
+    Seq("a + b + c", "a\n + b\n + c", "a\n +b\n +c", "a \n +b \n +c") -> apb_pc,
   
     Seq("a + b+c", "a\n + b\n  + c") -> ap_bpc
     
@@ -107,7 +109,7 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   )
   
   "parsing multiline lambdas" should "work" in {
-    val lsmap = App(OpApp('ls, map), Lambda('a.id -> 'b.id :: 'c.id -> 'd.id :: Nil))
+    val lsmap = App(OpAppL('ls, map), Lambda('a.id -> 'b.id :: 'c.id -> 'd.id :: Nil))
     
 tests(
 
@@ -217,6 +219,45 @@ a =
 }
 
 
+/*
+
+Problems:
+
+Operators by themselves...
+
+    foo a + b    // ?
+    foo a + b c  // ?
+    
+  Proposition 1:
+  
+      foo a + b    ==  foo (a + b)
+      foo a + b c  ==  foo (a + b) c
+  
+    Pros:
+      + fairly intuitive
+    Cons:
+      - there is already a syntax for prop1, which is to pack terms:
+          foo a+b  ==  foo (a + b)
+  
+  Proposition 2:
+
+      foo a + b    ==  (foo a) + b
+      foo a + b c  ==  (foo a) + (b c)
+    
+    Pros:
+      + permits nice paren-less separation of expressions
+          Person "John" 42 register. db
+      ++ it's both the OCaml and Haskell way, so I should probably pick this way for consistency with the ML family
+    Cons:
+      - it may seem inconsistent when methods are viewed as functions..
+          db.register Person "John" 42
+          register (Person "John" 42)    -- this one needs parens!
+        (on the other hand it can be and advantage of method syntax)
+
+
+
+
+*/
 
 
 
