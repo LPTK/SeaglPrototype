@@ -14,7 +14,14 @@ import utils._
  * 
  * 
  * FIXME:
-
+ 
+ 
+ ┌ a
+ │  .foo
+ └>[2.6] failure: end of input
+ 
+ 
+ 
  -- not sure if a problem:
  > map
  |  ls
@@ -25,15 +32,13 @@ import utils._
  |   +c
  [3.5] parsed: ((a +) ((b +) c))
   -- should be written:
+ > map ls
+ |  f
+ [2.3] parsed: ((map ls) f)
  > a
  |  +b
  |  +c
  [3.4] parsed: ((((a +) b) +) c)
- 
- -- PROBLEM
- > map ls
- |  f
- [2.3] parsed: (map (ls f))
  
  *
  */
@@ -84,9 +89,10 @@ object Parser extends TokenParsers {
   | (newLine /*| guard("|")*/) ~> indented(st, lambdaBlock, strict = st.inLambda)
   )
   
-  def lambdaBranch(st: State): Parser[(Term, Term)] = (term(st, false) <~ air("=>")) ~ genTerm(st) ^^ {
-    case a ~ b => (a,b)
-  }
+//  def toTuple = { case (a: Term) ~ (b: Term) => (a,b) }
+  def toTuple(x: Term ~ Term) = x match { case (a ~ b) => (a,b) }
+  
+  def lambdaBranch(st: State): Parser[(Term, Term)] = (term(st, false) <~ air("=>")) ~ genTerm(st) ^^ toTuple
   
   def atIndent(ind: Int): Parser[Unit] =
     space.? ^? ({ case Some(n) if n == ind =>  case None if ind == 0 => }, _ => "wrong indent")
@@ -123,20 +129,20 @@ object Parser extends TokenParsers {
   | ("(" ~> space.? ~> operator <~ space.? <~ ")") ^^ OpTerm
 //  | newLine ~> indented(st, n => (operator <~ space.?) ~ genTerm(State(n, false, true)) ^^ { case op ~ t => ??? })
 //  | (if (multiLine) newLine ~> indentedBlock(st) else acceptIf(_ => false)(_ => ""))
-  | (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id /* <- just a dummy one that will never parse */)
+//  | (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id /* <- just a dummy one that will never parse */)
   ) ^^ { _ reduceLeft App }
   
-//  def term(st: State, multiLine: Bool): Parser[Term] = "term" !!! (rep1sep(
-//    compactTerm(st, multiLine) ~ rep1(air(operator) ~ compactTerm(st, multiLine).?) ^^ ReduceOps
-//  | compactTerm(st, multiLine)
-//  , space) <~ space.? ^^ { _ reduceLeft App })
+  def spaceAppsTerm(st: State, multiLine: Bool): Parser[Term] =
+    rep1sep(compactTerm(st, multiLine), space) <~ space.? ^^ { _ reduceLeft App }
   
-  def spaceAppsTerm(st: State, multiLine: Bool): Parser[Term] = "term" !!!
-    (rep1sep(compactTerm(st, multiLine), space) <~ space.? ^^ { _ reduceLeft App })
-  
-  def term(st: State, multiLine: Bool): Parser[Term] = "term" !!! (rep1sep(
+  def term(st: State, multiLine: Bool): Parser[Term] = "term" !!! ((rep1sep(
     spaceAppsTerm(st, multiLine) ~ rep(air(operator) ~ spaceAppsTerm(st, multiLine).?) ^^ ReduceOps
   , space) <~ space.? ^^ { _ reduceLeft App })
+  ~ (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id /* <- just a dummy one that will never parse */).? ^^ {
+    case t ~ None => t
+    case t1 ~ Some(t2) => App(t1, t2)
+  }) | (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id) // TODO prettify/simplify this mess
+//    toTuple ^^ App.tupled)
   
   def genTerm(st: State): Parser[Term] = "genTerm" !!! rep1sep(
     lambda(st)

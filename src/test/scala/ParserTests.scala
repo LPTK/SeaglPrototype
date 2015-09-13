@@ -77,7 +77,10 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   
   "parsing blocks" should "work" in tests(
   
-    Seq("a\n  x = b\n  x a", "a(\n x = b\n x a)") -> App('a, Block(Let('x, 'b)::Nil, App('x, 'a)))
+    Seq("a\n  x = b\n  x a", "a(\n x = b\n x a)") -> App('a, Block(Let('x, 'b)::Nil, App('x, 'a))),
+    
+    Seq("map ls\n f") -> App(App('map, 'ls), 'f),
+    Seq("map\n ls\n  f") -> App('map, App('ls, 'f))
   
   
   )
