@@ -253,7 +253,26 @@ Operators by themselves...
           db.register Person "John" 42
           register (Person "John" 42)    -- this one needs parens!
         (on the other hand it can be and advantage of method syntax)
-
+  
+  
+  Appendix: Implementation of both props
+  
+  Prop1:
+  
+    def term(st: State, multiLine: Bool): Parser[Term] = "term" !!! (rep1sep(
+      compactTerm(st, multiLine) ~ rep1(air(operator) ~ compactTerm(st, multiLine).?) ^^ ReduceOps
+    | compactTerm(st, multiLine)
+    , space) <~ space.? ^^ { _ reduceLeft App })
+  
+  Prop2:
+  
+    def spaceAppsTerm(st: State, multiLine: Bool): Parser[Term] = "term" !!!
+      (rep1sep(compactTerm(st, multiLine), space) <~ space.? ^^ { _ reduceLeft App })
+    
+    def term(st: State, multiLine: Bool): Parser[Term] = "term" !!! (rep1sep(
+      spaceAppsTerm(st, multiLine) ~ rep(air(operator) ~ spaceAppsTerm(st, multiLine).?) ^^ ReduceOps
+    , space) <~ space.? ^^ { _ reduceLeft App })
+  
 
 
 

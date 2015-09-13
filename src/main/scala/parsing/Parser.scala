@@ -15,26 +15,26 @@ import utils._
  * 
  * FIXME:
 
-> a +b
-[1.5] parsed: ((a +) b)
-> a b +c
-[1.7] parsed: ((a (b +)) c)
- 
-> a b .foo
-[1.9] parsed: (a (b .foo))
-> a b + c
-[1.8] parsed: (a ((b +) c))
-
  -- not sure if a problem:
-> map
-|  ls
-|   f
-[3.4] parsed: (map (ls f))
-> a
-|  +b
-|   +c
-[3.5] parsed: ((a +) ((b +) c))
-
+ > map
+ |  ls
+ |   f
+ [3.4] parsed: (map (ls f))
+ > a
+ |  +b
+ |   +c
+ [3.5] parsed: ((a +) ((b +) c))
+  -- should be written:
+ > a
+ |  +b
+ |  +c
+ [3.4] parsed: ((((a +) b) +) c)
+ 
+ -- PROBLEM
+ > map ls
+ |  f
+ [2.3] parsed: (map (ls f))
+ 
  *
  */
 object Parser extends TokenParsers {
@@ -126,19 +126,16 @@ object Parser extends TokenParsers {
   | (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id /* <- just a dummy one that will never parse */)
   ) ^^ { _ reduceLeft App }
   
+//  def term(st: State, multiLine: Bool): Parser[Term] = "term" !!! (rep1sep(
+//    compactTerm(st, multiLine) ~ rep1(air(operator) ~ compactTerm(st, multiLine).?) ^^ ReduceOps
+//  | compactTerm(st, multiLine)
+//  , space) <~ space.? ^^ { _ reduceLeft App })
+  
+  def spaceAppsTerm(st: State, multiLine: Bool): Parser[Term] = "term" !!!
+    (rep1sep(compactTerm(st, multiLine), space) <~ space.? ^^ { _ reduceLeft App })
+  
   def term(st: State, multiLine: Bool): Parser[Term] = "term" !!! (rep1sep(
-//    compactTerm(st, multiLine) ~ rep1(space ~> operator) ^^ { case t ~ ops => ops.foldLeft(t)(OpAppL) }
-//    compactTerm(st, multiLine) ~ rep1(air(operator)) ~ compactTerm(st, multiLine).? ^^ {
-//      case t ~ ops ~ None => ops.foldLeft(t)(OpAppL)
-//      case t ~ ops ~ Some(t2) => App(ops.foldLeft(t)(OpAppL), t2)
-//    compactTerm(st, multiLine) ~ rep1(air(operator) ~ compactTerm(st, multiLine).?) ^^ {
-//      case t ~ ops_ts => ops_ts.foldLeft(t){
-//        case (tacc, op ~ None) => OpAppL(tacc, op)
-//        case (tacc, op ~ Some(t2)) => App(OpAppL(tacc, op), t2)
-//      }
-//    }
-    compactTerm(st, multiLine) ~ rep1(air(operator) ~ compactTerm(st, multiLine).?) ^^ ReduceOps
-  | compactTerm(st, multiLine)
+    spaceAppsTerm(st, multiLine) ~ rep(air(operator) ~ spaceAppsTerm(st, multiLine).?) ^^ ReduceOps
   , space) <~ space.? ^^ { _ reduceLeft App })
   
   def genTerm(st: State): Parser[Term] = "genTerm" !!! rep1sep(
