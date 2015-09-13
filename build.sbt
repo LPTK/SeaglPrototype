@@ -8,5 +8,14 @@ libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test"
 
 
 
+// Wanted nice Unicode (extended ASCII) characters when doing `sbt run`, but this messes up the REPL feedback beyond:
+
+//fork in run := true
+
+//connectInput in run := true
+
+//javaOptions in run += "-Dfile.encoding=UTF-8"
+
+
 
 

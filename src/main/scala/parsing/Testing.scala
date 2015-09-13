@@ -1,5 +1,8 @@
 package parsing
 
+import java.io.PrintStream
+import java.nio.charset.Charset
+
 import scala.io.StdIn._
 
 import utils._
@@ -33,11 +36,27 @@ object QuickTest extends App {
 
 
 object ParserREPL extends App {
+  val utf8 =
+    try { System.setOut(new PrintStream(System.out, true, "utf-8")); true }
+    catch { case _: SecurityException => Charset.defaultCharset().name == "UTF-8" }
   
   println("Parsing...");
   
-  while (true) {
-    print("> ")
+//  println(Charset.defaultCharset().name())
+  
+  val (first, pre, post) = if (utf8)
+      ("┌ ", "│ ", "└> ")
+    else
+      ("> ", "| ", "")
+  
+  val BreakOut = new Exception()
+  
+  try while (true) {
+//    print("> ")
+    // Doesn't print correctly in iTerm2; even the unicode encoding doesn't work... :(
+    //   (http://ascii-table.com/ascii-extended-pc-list.php)
+//    print("┌ ")
+    print(first)
   
 //    val line = readLine()
 //  
@@ -46,20 +65,25 @@ object ParserREPL extends App {
 //  
 //    println(pgrm)
   
-    val pre = "| "
+//    val pre = "| "
+//    val pre = "│ "
     
 //    val code = Iterate continually readLine takeWhile (_.nonEmpty) mkString "\n"
     val code = Iterate(readLine()) ++ (Iterate continually {print(pre); System.out.flush(); readLine()}
-      takeWhile (_.nonEmpty)) mkString "\n"
+    ) map (str => if (str == null) throw BreakOut else str) takeWhile (_.nonEmpty) mkString "\n"
     
     val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code))
     
     print("\b" * pre.length) // delete the last characters ("| ") -- doesn't seem to work on mac/idea 
-    println(pgrm)
+//    println(pgrm)
+    println(post + pgrm)
     
     
     // TODO: better handling of the parsed value
   
+  } catch {
+    case BreakOut =>
+      println("Input closed.")
   }
   
 }
