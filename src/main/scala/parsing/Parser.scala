@@ -19,16 +19,7 @@ import utils._
  * 
  * 
  * FIXME:
- 
- 
- ┌ a
- │  .foo.bar
- └>[2.6] failure: end of input
- ┌ a
- │  .foo
- │   .bar
- └> [3.7] failure: end of input
-  
+
  
  ┌ if x > y
  │     foo
@@ -38,7 +29,7 @@ import utils._
 
  
  
- -- not sure if a problem:
+ -- not a problem:
  > map
  |  ls
  |   f
@@ -48,8 +39,9 @@ import utils._
  |   +c
  [3.5] parsed: ((a +) ((b +) c))
   -- should be written:
- > map ls
- |  f
+ > map
+ |     ls
+ |   f
  [2.3] parsed: ((map ls) f)
  > a
  |  +b
@@ -146,7 +138,7 @@ self =>
 //  def ReduceOps(t: Option[Term], ls: List[Operator ~ Option[Term]]): Term = (t,ls) match {
 //  def ReduceOps: ((Option[Term], List[Operator ~ Option[Term]])) => Term = (_: (Option[Term], List[Operator ~ Option[Term]])) match {
 //  def ReduceOps: ((Option[Term], List[Operator ~ Option[Term]])) => Term = {
-  def ReduceOps: (Option[Term] ~ List[Operator ~ Option[Term]]) => Term = {
+  def ReduceOps: (Option[Term] ~ List[Operator ~ Option[Term]]) => Term = { // TODO simplify/rm?
     case (None ~ Nil) => wtf
     case (Some(t) ~ Nil) => t
     case Some(t) ~ ((op ~ None) :: ls) => ReduceOps(Some(OpAppL(t, op)) ~~ ls)
@@ -156,7 +148,7 @@ self =>
     case None ~ ((op ~ Some(t)) :: ls) => ReduceOps(Some(OpAppR(op, t)) ~~ ls)
   }
   
-  def compactTerm(st: State, multiLine: Bool): Parser[Term] = "compTerm" !!! rep1(
+  def compactTerm(st: State, multiLine: Bool): Parser[Term] = "compTerm" !!! (rep1(
 //    subTerm(st, multiLine) ~ rep1(operator) ^^ { case t ~ ops => ops.foldLeft(t)(OpAppL) }
     (subTerm(st, multiLine) ^^ Some.apply) ~ rep1(operator ~ subTerm(st, multiLine).?) /*^^ toTuple*/ ^^ ReduceOps//(ReduceOps _).tupled
   | operator ~ compactTerm(st, multiLine) ^^ { case op ~ t => OpAppR(op, t) } // allow ops without term? <- not here at least (cf: (a +) parsed (a (+)))
@@ -165,7 +157,7 @@ self =>
 //      case op ~ Some(t) => OpAppR(op, t)
 //    } // allow ops without term?
   | subTerm(st, multiLine)
-  ) ^^ { _ reduceLeft App }
+  ) ^^ { _ reduceLeft App })
   
   def subTerm(st: State, multiLine: Bool): Parser[Term] = "subTerm" !!! rep1(
     symbol ^^ Id
@@ -179,6 +171,7 @@ self =>
   def spaceAppsTerm(st: State, multiLine: Bool): Parser[Term] =
     rep1sep(compactTerm(st, multiLine), space) <~ space.? ^^ { _ reduceLeft App }
   
+  /** Note: not sure if multiLine param useful */ 
   def term(st: State, multiLine: Bool): Parser[Term] = "term" !!! ((rep1sep(
     (spaceAppsTerm(st, multiLine) ^^ Some.apply) ~ rep(air(operator) ~ spaceAppsTerm(st, multiLine).?) /*^^ toTuple*/ ^^ ReduceOps
   // TODO op term here
@@ -186,7 +179,7 @@ self =>
   ~ (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id /* <- just a dummy one that will never parse */).? ^^ {
     case t ~ None => t
     case t1 ~ Some(t2) => App(t1, t2)
-  }) | (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id) // TODO prettify/simplify this mess
+  } | (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id)) // TODO prettify/simplify this mess
 //    toTuple ^^ App.tupled)
   
   def genTerm(st: State): Parser[Term] = "genTerm" !!! rep1sep(
@@ -194,22 +187,22 @@ self =>
 //  | "nl op" !!! {(term(st, false) <~ newLine) ~ indented(st, n => air(operator) ~ genTerm(State(n, false, true)))} ^^ {
 //      case t1 ~ (op ~ t2) => App(OpApp(t1, op), t2)
 //    }
-  | "nl op" !!! {(term(st, false) <~ newLine) ~ indented(st, n =>
-      rep1sep((atIndent(n) ~> operator <~ space.?) ~ genTerm(State(n, false)).? /*^^ {case a~b=>(a,b)}*/, newLine)
-//      rep1sep((atIndent(n) ~> rep(air(operator)) <~ space.?) ~ genTerm(State(n, false)).? /*^^ {case a~b=>(a,b)}*/, newLine)
+  | "nl op" !!! {(term(st, true) <~ newLine) ~ indented(st, n => // FIXME setting multiLine true makes nl ops right-associative!!
+//      rep1sep((atIndent(n) ~> operator <~ space.?) ~ genTerm(State(n, false)).? /*^^ {case a~b=>(a,b)}*/, newLine)
+      rep1sep((atIndent(n) ~> rep1(air(operator)) <~ space.?) ~ genTerm(State(n, false)).? /*^^ {case a~b=>(a,b)}*/, newLine)
     , strict = true)} ^^ { /** Note: putting it non-strict causes ambiguity problems and parses in a rihgt-assoc way! -- could use trailingOp switch though */
 //      case t1 ~ (op ~ t2) => App(OpApp(t1, op), t2)
-      case t1 ~ op_ts => op_ts.foldLeft(t1) {
-        case(tacc, op ~ Some(t)) => App(OpAppL(tacc, op), t)
-        case(tacc, op ~ None) => OpAppL(tacc, op)
-      }
 //      case t1 ~ op_ts => op_ts.foldLeft(t1) {
-////        case(tacc, ops ~ Some(t)) => App(ops.foldLeft(tacc){case(tacc, op) => OpAppL(tacc, op)}, t)
-////        case(tacc, ops ~ None) => ops.foldLeft(tacc){case(tacc, op) => OpAppL(tacc, op)}
-//        case(tacc, ops ~ to) => 
-//          val opst = ops.foldLeft(tacc){case(tacc, op) => OpAppL(tacc, op)}
-//          to map (App(opst, _)) getOrElse opst
+//        case(tacc, op ~ Some(t)) => App(OpAppL(tacc, op), t)
+//        case(tacc, op ~ None) => OpAppL(tacc, op)
 //      }
+      case t1 ~ op_ts => op_ts.foldLeft(t1) {
+//        case(tacc, ops ~ Some(t)) => App(ops.foldLeft(tacc){case(tacc, op) => OpAppL(tacc, op)}, t)
+//        case(tacc, ops ~ None) => ops.foldLeft(tacc){case(tacc, op) => OpAppL(tacc, op)}
+        case(tacc, ops ~ to) => 
+          val opst = ops.foldLeft(tacc){case(tacc, op) => OpAppL(tacc, op)}
+          to map (App(opst, _)) getOrElse opst
+      }
 //      case t1 ~ ops_ts => ReduceOps(Some(t1) ~~ (ops_ts.flatMap {
 //        case (ops, None) => ops map (_ -> None)
 //        case (ops, Some(t)) => None
@@ -286,6 +279,13 @@ self =>
   }
   
 }
+
+
+
+
+
+
+
 
 object AST {
 

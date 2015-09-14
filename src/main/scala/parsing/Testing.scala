@@ -212,32 +212,40 @@ Examples:
   
   if (p.age >= 18) "accepted" .else "rejected"
   
-  if p.age >= 18
+  if (p.age >= 18)
       print "cool!"
       "accepted"
     .else
       print "oops"
       "rejected"
 
+  // Note: no-indent newline ops would allow a syntax a bit better (.else same indent as if):
+  
+  if (p.age >= 18)
+    print "cool!"
+    "accepted"
+  .else
+    print "oops"
+    "rejected"
 
   // Alternative syntax, better separation between condition and branch:
   
   p.age >= 18 ? "accepted" .else "rejected"
   
   p.age >= 18 ?
-      print "cool!"
-      "accepted"
-    .else
-      print "oops"
-      "rejected"
+    print "cool!"
+    "accepted"
+  .else
+    print "oops"
+    "rejected"
       
   //Not sure it's a good idea, but for "else" we could have something like:  
   
   p.age >= 18 ? "accepted" !? "rejected"
   p.age >= 18 ?
-      "accepted"
-    !?                     -- it's less legible
-      "rejected"
+    "accepted"
+  !?                     -- it's less legible
+    "rejected"
 
 
 
@@ -255,19 +263,40 @@ Examples:
   
   if (p.age >= 18) "accepted" "rejected"
   
-  if p.age >= 18
+  if (p.age >= 18)
       "accepted"
     else
       "rejected"
       
   // Not very nice syntax -- to avoid:
-  if p.age >= 18
+  if (p.age >= 18)
       "accepted"
     "rejected"  
   
   // Note: can be a disadvantage that else is the identity; giving it a special type may enhance user experience, even
   // if we can't use `if c t e` directly anymore, but rather `if c t e.else`
 
+
+Problem of the approach...
+.else if won't parse correctly
+
+    if (x > y)
+        foo
+      .else if (x < y)
+        bar
+      .else
+        baz
+ 
+ // will parse like:
+ 
+    ((if (x > y)
+        foo
+    ).else (if (x < y)
+        bar)
+    ).else
+        baz
+
+Solution: use an .elif function (just like in python)
 
 
 Idea: use {} to escape pattern-mode and write in expression mode

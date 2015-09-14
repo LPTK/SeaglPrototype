@@ -6,15 +6,21 @@ import utils._
 import Parser._
 import AST._
 
+/**
+ * TODO test for empty lines
+ * 
+ */
 class ParserTests extends FlatSpec with ShouldMatchers {
   
   implicit def sym2str(s: Sym): Str = s match { case Sym(str) => str }
   implicit def sym2id(s: Sym): Id = s match { case Sym(str) => Id(str) }
   
-  val plus = Parser.lexical.SymbolOperator("+")
-  val minus = Parser.lexical.SymbolOperator("-")
+//  val plus = Parser.lexical.SymbolOperator("+")
+//  val minus = Parser.lexical.SymbolOperator("-")
+  val List(plus, minus, gt, qmark) =
+    List("+", "-", ">", "?") map Parser.lexical.SymbolOperator
   
-  val List(foo, bar, map) = List("foo", "bar", "map") map Parser.lexical.MethodOperator
+  val List(foo, bar, map, els) = List("foo", "bar", "map", "else") map Parser.lexical.MethodOperator
   
   
   "parsing id" should "work" in {
@@ -80,12 +86,25 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     Seq("a\n  x = b\n  x a", "a(\n x = b\n x a)") -> App('a, Block(Let('x, 'b)::Nil, App('x, 'a))),
     
     Seq("map ls\n f") -> App(App('map, 'ls), 'f),
-    Seq("map\n ls\n  f") -> App('map, App('ls, 'f))
+    Seq("map\n ls\n  f") -> App('map, App('ls, 'f)),
+  
+    Seq("a.foo.bar", "a\n .foo\n .bar") -> OpAppL(OpAppL('a, foo), bar)
+    // Note: "a"
   
   
   )
   
-  
+  "parsing invalid blocks" should "fail" in {
+    intercept[Exception] { test("", null) }
+    
+    intercept[Exception] { test("a\n .foo\n  .bar", null) }
+    /*    
+     ┌ a
+     │  .foo
+     │   .bar  -- trying to apply .bar on .foo; probably not what we want
+     └> [3.7] failure: end of input
+    */
+  }
 
   "parsing lambdas" should "work" in tests(
     
@@ -174,11 +193,32 @@ a =
   
   )
   
+  "parsing ite" should "work" in tests(
+    Seq("if (x > y) foo .else bar", """
+if (x > y)
+    foo
+  .else
+    bar
+"""/*,""" TODO
+if (x > y)
+  foo
+.else
+  bar
+    """*/) -> App(OpAppL(App(App('if, App(OpAppL('x, gt), 'y)), 'foo), els), 'bar),
+  
+    Seq("x > y ? foo .else bar", """
+x > y ?
+    foo
+  .else
+    bar
+""") -> App(OpAppL(App(OpAppL(App(OpAppL('x, gt), 'y), qmark), 'foo), els), 'bar)
+  )
+  
   
   def test(str: Str, expected: Stmt) = parse(str, repl) match {
     case Success(t, _) => assert(t == expected)
     case r @ NoSuccess(err, _) =>
-      println(r)
+      if (expected != null) println(r)
       throw new Exception("Failure: "+err)
   }
 //  def tests(pairs: TestCase*) = {
