@@ -20,13 +20,19 @@ import utils._
  * 
  * FIXME:
 
+┌   -- COMMENT
+│ a
+│ 
+└> [2.1] failure: wrong indent
  
- ┌ if x > y
- │     foo
- │   .else
- │     bar
- └> [3.8] failure: Keyword(() expected but NewLine found
+┌ (
+│   a
+│ )
+│ 
+└> [3.1] failure: block needs to be indented
 
+)
+^
  
  
  -- not a problem:
@@ -65,6 +71,9 @@ self =>
     elem("identifier", _.isInstanceOf[Symbol]) ^^ (_.chars)
   
   case class State(ind: Int, inLambda: Bool, trailingOp: Bool = false) // TODO rm trailingOp
+  
+  
+  def nothing: Parser[Nothing] = acceptIf(_ => false)(_ => "Parser parses nothing") ^^ { _ => wtf }
   
   def space: Parser[Int] = acceptMatch("space", {case Space(n) => n})
   
@@ -151,7 +160,7 @@ self =>
   def compactTerm(st: State, multiLine: Bool): Parser[Term] = "compTerm" !!! (rep1(
 //    subTerm(st, multiLine) ~ rep1(operator) ^^ { case t ~ ops => ops.foldLeft(t)(OpAppL) }
     (subTerm(st, multiLine) ^^ Some.apply) ~ rep1(operator ~ subTerm(st, multiLine).?) /*^^ toTuple*/ ^^ ReduceOps//(ReduceOps _).tupled
-  | operator ~ compactTerm(st, multiLine) ^^ { case op ~ t => OpAppR(op, t) } // allow ops without term? <- not here at least (cf: (a +) parsed (a (+)))
+  /**| operator ~ compactTerm(st, multiLine) ^^ { case op ~ t => OpAppR(op, t) } // allow ops without term? <- not here at least (cf: (a +) parsed (a (+)))*/
 //  | operator ~ compactTerm(st, multiLine).? ^^ {
 //      case op ~ None => OpTerm(op)
 //      case op ~ Some(t) => OpAppR(op, t)
@@ -162,7 +171,11 @@ self =>
   def subTerm(st: State, multiLine: Bool): Parser[Term] = "subTerm" !!! rep1(
     symbol ^^ Id
   | ("(" ~> space.? ~> genTerm(State(0, false)) <~ space.? <~ ")") // TODO ( + newline ... TODO not 0
-  | ("(" ~> space.? ~> operator <~ space.? <~ ")") ^^ OpTerm
+//  | ("(" ~> space.? ~> operator <~ space.? <~ ")") ^^ OpTerm
+  | ("(" ~> air(operator) ~ genTerm(State(0, false)).? <~ space.? <~ ")") ^^ {
+      case op ~ None => OpTerm(op)
+      case op ~ Some(t) => OpAppR(op, t)
+    }
 //  | newLine ~> indented(st, n => (operator <~ space.?) ~ genTerm(State(n, false, true)) ^^ { case op ~ t => ??? })
 //  | (if (multiLine) newLine ~> indentedBlock(st) else acceptIf(_ => false)(_ => ""))
 //  | (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id /* <- just a dummy one that will never parse */)
@@ -176,10 +189,10 @@ self =>
     (spaceAppsTerm(st, multiLine) ^^ Some.apply) ~ rep(air(operator) ~ spaceAppsTerm(st, multiLine).?) /*^^ toTuple*/ ^^ ReduceOps
   // TODO op term here
   , space) <~ space.? ^^ { _ reduceLeft App })
-  ~ (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id /* <- just a dummy one that will never parse */).? ^^ {
+  ~ (if (multiLine) newLine ~> indentedBlock(st) else nothing).? ^^ {
     case t ~ None => t
     case t1 ~ Some(t2) => App(t1, t2)
-  } | (if (multiLine) newLine ~> indentedBlock(st) else symbol ^^ Id)) // TODO prettify/simplify this mess
+  } | (if (multiLine) newLine ~> indentedBlock(st) else nothing)) // TODO prettify/simplify this mess
 //    toTuple ^^ App.tupled)
   
   def genTerm(st: State): Parser[Term] = "genTerm" !!! rep1sep(
@@ -351,9 +364,13 @@ Interaction between App and OpApp
   a.foo.foo(b) c
   a.foo.foo(b).bar
   
-  
 
+I used to allow the syntax "+b" as in "foo u +b v", where + is any operator and b any term, without any paren, to mean
+a right-partial application of + :
+    +b == (+ b) == (x => x + b)
 
+However, this made the parser unnecessarily complicated, and it also potentially make the language harder to read, so I
+now require parens: (+b)
 
 
 

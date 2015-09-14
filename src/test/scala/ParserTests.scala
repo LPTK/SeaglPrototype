@@ -57,7 +57,12 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     Seq("a b+", "a (b+)", "a(b +)") -> App('a, OpAppL('b, plus)),
     Seq("a b+ c", "a (b+) c", "a(b +)c") -> App(App('a, OpAppL('b, plus)), 'c),
   
-    Seq("a .foo +", "a.foo +", "a.foo+") -> OpAppL(OpAppL('a, foo), plus)
+    Seq("a .foo +", "a.foo +", "a.foo+") -> OpAppL(OpAppL('a, foo), plus),
+  
+    Seq("(.foo)"/*, "(\n .foo \n)" FIXME*/) -> OpTerm(foo),
+  
+    Seq("(.foo x)", "(.foo\n x)") -> OpAppR(foo, 'x)
+  
     
   )
   
@@ -161,13 +166,13 @@ ls.map
     b
   | c => d
 """) -> lsmap,
-Seq(/*""" FIXME
+Seq("""
 foo
 | Some ls => ls.map
   | a => b
   | c => d
 | None => Nil
-""",*/"""
+""","""
 foo
 | Some ls =>
   ls.map
