@@ -80,7 +80,7 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   
   "parsing newline operators" should "work" in tests(
   
-    Seq("a + b + c", "a\n + b\n + c", "a\n +b\n +c", "a \n +b \n +c") -> apb_pc,
+    Seq("a + b + c", "a\n + b\n + c", "a\n +b\n +c", "a \n +b \n +c", "a\n+ b\n+ c") -> apb_pc,
   
     Seq("a + b+c", "a\n + b\n  + c") -> ap_bpc
     
@@ -140,11 +140,12 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     
 tests(
 
-//Seq("""
-//foo =
-//| b => bar =
-//  | d => e
-//""") -> Lambda('b.id -> Lambda('d.id -> 'e.id)),
+Seq("""
+foo =
+| b =>
+  bar =
+  | d => e
+""") -> Let('foo, Lambda('b.id -> Block(Let('bar, Lambda('d.id -> 'e.id)) :: Nil, Unit))),
 
 Seq("""
 a

@@ -112,8 +112,6 @@ self =>
   def atIndent(ind: Int): Parser[Unit] =
     space.? ^? ({ case Some(n) if n == ind =>  case None if ind == 0 => }, _ => "wrong indent")
   
-  def indentedBlock(implicit st: State): Parser[Term] = "indentedBlock" !!! indented(block)
-  
   /** Note: will NOT eat the spaces used for indenting the first line!!! */
   def indented[T](p: Int => Parser[T], strict: Bool = true)(implicit st: State): Parser[T] =
     "indented" !!! (emptyLines ~> guard(space.?) ^? ({ // TODO better error on not defined
@@ -136,14 +134,14 @@ self =>
   | subTerm
   ) ^^ { _ reduceLeft App })
   
-  def subTerm(implicit st: State): Parser[Term] = "subTerm" !!! rep1(
+  def subTerm(implicit st: State): Parser[Term] = "subTerm" !!! (rep1(
     symbol ^^ Id
-  | ("(" ~> space.? ~> genTerm(State(0, false)) <~ space.? <~ ")") // TODO ( + newline ... TODO not 0
+  | ("(" ~> air(genTerm(State(st.ind, false))) <~ ")") // TODO ( + newline ...
   | ("(" ~> air(operator) ~ genTerm(State(0, false)).? <~ space.? <~ ")") ^^ {
       case op ~ None => OpTerm(op)
       case op ~ Some(t) => OpAppR(op, t)
     }
-  ) ^^ { _ reduceLeft App }
+  ) ^^ { _ reduceLeft App })
   
   def spaceAppsTerm(implicit st: State): Parser[Term] =
     rep1sep(compactTerm, space) <~ space.? ^^ { _ reduceLeft App }
@@ -153,24 +151,25 @@ self =>
     spaceAppsTerm ~ rep(air(operator) ~ spaceAppsTerm.?) ^^ ReduceOps
   // TODO op term here
   , space) <~ space.? ^^ { _ reduceLeft App })
-  ~ (if (multiLine) newLine ~> indentedBlock else nothing).? ^^ {
+  ~ (if (multiLine) newLine ~> indented(block) else nothing).? ^^ {
     case t ~ None => t
     case t1 ~ Some(t2) => App(t1, t2)
-  } | (if (multiLine) newLine ~> indentedBlock else nothing)) // TODO prettify/simplify this mess
+  } | (if (multiLine) newLine ~> indented(block) else nothing)) // TODO prettify/simplify this mess
   
   def genTerm(implicit st: State): Parser[Term] = "genTerm" !!! rep1sep(
     lambda
-  | "nl op" !!! {(term(true) <~ newLine) ~ indented(n =>
-      rep1sep((atIndent(n) ~> rep1(air(operator)) <~ space.?) ~ genTerm(State(n, false)).?, newLine)
-    , strict = true)} ^^ { /** FIXME: putting it non-strict causes ambiguity problems and parses in a rihgt-assoc way! -- could use trailingOp switch though */
+  | "nl op" !!! ((term(true) <~ newLine) ~ indented(opBlock, strict = false) ^^ {
       case t1 ~ op_ts => op_ts.foldLeft(t1) {
         case(tacc, ops ~ to) => 
           val opst = ops.foldLeft(tacc){case(tacc, op) => OpAppL(tacc, op)}
           to map (App(opst, _)) getOrElse opst
       }
-    }
+    })
   | term(true)
   , space.?) <~ space.? ^^ { _ reduceLeft App }
+  
+  def opBlock(n: Int)(implicit st: State) =
+    rep1sep((atIndent(n) ~> rep1(air(operator)) <~ space.?) ~ genTerm(State(n+1, false)).?, newLine)
   
   def stmt(implicit st: State): Parser[Stmt] = "stmt" !!! (let | genTerm)
   
