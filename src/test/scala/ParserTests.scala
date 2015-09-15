@@ -33,6 +33,14 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     
   }
   
+  "parsing litterals" should "work" in {
+    tests(
+      "()" -> Unit,
+      "42" -> Literal(42),
+      "\"ok\"" -> Literal("ok")
+    )
+  }
+  
   "parsing app" should "work" in {
     
     tests(

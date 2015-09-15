@@ -136,6 +136,9 @@ self =>
   
   def subTerm(implicit st: State): Parser[Term] = "subTerm" !!! (rep1(
     symbol ^^ Id
+  | acceptMatch("string litteral", {case StrLit(str) => Literal(str)})
+  | acceptMatch("int litteral", {case IntLit(n) => Literal(n)})
+  | "(" ~ ")" ^^^ Unit
   | ("(" ~> air(genTerm(State(st.ind, false))) <~ ")") // TODO ( + newline ...
   | ("(" ~> air(operator) ~ genTerm(State(0, false)).? <~ space.? <~ ")") ^^ {
       case op ~ None => OpTerm(op)
@@ -262,8 +265,12 @@ object AST {
   
   sealed trait Term extends Stmt
   
-  case object Unit extends Term {
-    def str = s"()"
+//  case object Unit extends Term {
+//    def str = s"()"
+//  }
+  object Unit extends Literal()
+  case class Literal[T](value: T) extends Term {
+    def str = s"Lit($value)"
   }
   case class Id(s: String) extends Term {
     def str = s"$s"

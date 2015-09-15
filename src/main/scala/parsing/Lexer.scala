@@ -37,11 +37,15 @@ class Lexer extends Lexical {
   case class Space(size: Int) extends Token {
     def chars = s"[space $size]"
   }
+  case class IntLit(n: BigInt) extends Token {
+    def chars = n.toString()
+  }
+  case class StrLit(chars: Str) extends Token
   
   val any = elem("any", _ => true)
   def anyBut(chs: Char*) =
 //    elem("any but", ch => !(chs contains ch))
-    elem("any but "+(chs map (_.toInt) mkString ","), !chs.toSet)
+    elem("any char but "+(chs map (_.toInt) mkString ","), !chs.toSet)
   
   val keychars = Set('(', ')', '.', ';', '|', '=')
 
@@ -52,6 +56,8 @@ class Lexer extends Lexical {
   /** Characters in operators */
   def opChar = elem("opchar", ch => !ch.isLetterOrDigit && ch != ' ' && !keychars(ch) && ch != '\n')
 
+  def ident = letter ~ (letter | digit).* ^^ { case l ~ chs => l :: chs mkString ""}
+  
 //  def error[T](p: Parser[T], msg: Str) = p ~ Parser(in => Error(msg, in)) ^^ (_ => ???)
   def error[T](p: Parser[T], msg: Str) = p ^^ (_ => throw ParseException(msg))
   
@@ -64,8 +70,10 @@ class Lexer extends Lexical {
 //    | '/' ~ '*' ^^^ (throw new Exception("Unclosed multiline comment")) // TODO better error
 ////    | ('-' ~ '-' | '/' ~ '/') ~ anyBut('\n', EofCh).* ~ (accept(EofCh) | '\n') ^^^ Space(1)
 //    | '\t' ^^ { _ => throw new Exception("Tabs disallowed") } // TODO
-    | ('.' ~> rep1(letter)) ^^ { chars => MethodOperator(chars mkString "") }
     | rep1(' ') ^^ { ls => Space(ls.size) }
+    | ('.' ~> ident) ^^ MethodOperator
+    | rep1(digit) ^^ (_ mkString "") ^^ BigInt.apply ^^ IntLit
+    | '"' ~> anyBut('"').* <~ '"' ^^ (_.mkString) ^^ StrLit
     
 //    | accept("=>") ^^ { c => Keyword(c.toString) }
     | '=' ~ '>' ^^ { c => Keyword("=>") }
@@ -73,8 +81,8 @@ class Lexer extends Lexical {
     | '\n' ^^ { _ => NewLine }
     | acceptIf(keychars)(ch => s"$ch is not a keyword") ^^ { c => Keyword(c.toString) }
 //    | EofCh ^^^ EOF // what's the use of this?!
-    | rep1(opChar) ^^ { chars => SymbolOperator(chars mkString "") }
-    | rep1(letter) ^^ { chars => Symbol(chars mkString "") }
+    | rep1(opChar) ^^ (_ mkString "") ^^ SymbolOperator//^^ { chars => SymbolOperator(chars mkString "") }
+    | ident ^^ Symbol
   )
   // Exceptions are not raised here
   //  catch {
