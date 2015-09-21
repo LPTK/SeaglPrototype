@@ -97,6 +97,8 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   "parsing blocks" should "work" in tests(
   
     Seq("a\n  x = b\n  x a", "a(\n x = b\n x a)") -> App('a, Block(Let('x, 'b)::Nil, App('x, 'a))),
+    Seq("a\nx = b\nx a", "a;x=b;x a") -> Block('a::Let('x, 'b)::Nil, App('x, 'a)),
+    Seq("a;\n x=b\n x a") -> Block('a::Block(Let('x, 'b)::Nil, App('x, 'a))::Nil),
     
     Seq("map ls\n f") -> App(App('map, 'ls), 'f),
     Seq("map\n ls\n  f") -> App('map, App('ls, 'f)),
@@ -153,7 +155,7 @@ foo =
 | b =>
   bar =
   | d => e
-""") -> Let('foo, Lambda('b.id -> Block(Let('bar, Lambda('d.id -> 'e.id)) :: Nil, Unit))),
+""") -> mkBlock(Let('foo, Lambda('b.id -> Block(Let('bar, Lambda('d.id -> 'e.id)) :: Nil, Unit)))),
 
 Seq("""
 a
@@ -197,13 +199,13 @@ foo
   
   "parsing lets" should "work" in tests(
     
-    Seq("a = b", "a =\n  b") -> Let('a, 'b),
+    Seq("a = b", "a =\n  b") -> mkBlock(Let('a, 'b)),
   
     Seq("a = b => c | d => e","""
 a =
 | b => c
 | d => e
-""") -> Let('a, Lambda('b.id -> 'c.id, 'd.id -> 'e.id))
+""") -> mkBlock(Let('a, Lambda('b.id -> 'c.id, 'd.id -> 'e.id)))
   
   )
   
@@ -229,7 +231,8 @@ x > y ?
   )
   
   
-  def test(str: Str, expected: Stmt) = parse(str, repl) match {
+//  def test(str: Str, expected: Stmt) = parse(str, repl) match {
+  def test(str: Str, expected: Stmt) = parse(str, pgrm) match {
     case Success(t, _) => assert(t == expected)
     case r @ NoSuccess(err, _) =>
       if (expected != null) println(r)
@@ -262,10 +265,10 @@ x > y ?
   }
   
   sealed trait TestCase
-  implicit class Single(val pair: (Str, Stmt)) extends TestCase {
+  implicit class Single(val pair: (Str, Term)) extends TestCase {
     override def toString = pair.toString
   }
-  implicit class Multi(val pairs: (Seq[Str], Stmt)) extends TestCase {
+  implicit class Multi(val pairs: (Seq[Str], Term)) extends TestCase {
     override def toString = pairs.toString
   }
   

@@ -13,6 +13,13 @@ import utils._
  * 
  * TODO tuples
  * 
+ * TODO semicolon can have weird behaviors; I could force no multiline for genTerm in (rep1sep(let | genTerm, air(";"))
+ * (maybe, prevent trailing semis?)
+ * ie:
+ *    foo;
+ *      bar
+ *      baz
+ * 
  * FIXME prevent this:
  *   a
  *    + b
@@ -167,7 +174,7 @@ self =>
     case t1 ~ Some(t2) => App(t1, t2)
   } | (if (multiLine) newLine ~> indented(block) else nothing)) // TODO prettify/simplify this mess
   
-  def genTerm(implicit st: State): Parser[Term] = "genTerm" !!! rep1sep(
+  def genTerm(implicit st: State): Parser[Term] = "genTerm" !!! (rep1sep(
     lambda
   | "nl op" !!! ((term(true) <~ newLine) ~ indented(opBlock, strict = false) ^^ {
       case t1 ~ op_ts => op_ts.foldLeft(t1) {
@@ -177,12 +184,15 @@ self =>
       }
     })
   | term(true)
-  , space.?) <~ space.? ^^ { _ reduceLeft App }
+  , space.?) <~ space.? ^^ { _ reduceLeft App })
   
   def opBlock(n: Int)(implicit st: State) =
     rep1sep((atIndent(n) ~> rep1(air(operator)) <~ space.?) ~ genTerm(State(n+1, false)).?, newLine)
   
-  def stmt(implicit st: State): Parser[Stmt] = "stmt" !!! (let | genTerm)
+  def stmt(implicit st: State): Parser[Stmt] = "stmt" !!! (rep1sep(let | genTerm, air(";")) ^^ {
+    case stmt :: Nil => stmt
+    case ls => Block(ls)
+  })
   
   def let(implicit st: State): Parser[Stmt] = "let" !!! ((term(false) <~ air("=")) ~ genTerm) ^^ {
     case a ~ b => Let(a, b)
@@ -278,7 +288,10 @@ object AST {
 //  }
   object Unit extends Literal()
   case class Literal[T](value: T) extends Term {
-    def str = s"Lit($value)"
+    def str = value match {
+      case () => "()"
+      case _ => s"Lit($value)"
+    }
   }
   case class Id(s: String) extends Term {
     def str = s"$s"
@@ -306,11 +319,13 @@ object AST {
       if (stmts.nonEmpty) s"{${stmts mkString "; "}; $ret}"
       else ret.toString
   }
-  object Block { def apply(lines: List[Stmt]): Term = lines match {
-    case (t: Term) :: Nil => t
-    case init :+ (t: Term) => Block(init, t)
-    case ls => Block(ls, Unit)
-  }}
+  object Block { def apply(lines: List[Stmt]): Term = mkBlock(lines: _*) }
+//  object Block { val apply = mkBlock _ }
+  def mkBlock(lines: Stmt*): Term = lines match {
+    case Seq(t: Term) => t
+    case init :+ (t: Term) => Block(init.toList, t)
+    case ls => Block(ls.toList, Unit)
+  }
 
 }
 
