@@ -72,8 +72,7 @@ object ParserREPL extends App {
     val code = Iterate(readLine()) ++ (Iterate continually {print(pre); System.out.flush(); readLine()}
     ) map (str => if (str == null) throw BreakOut else str) takeWhile (_.nonEmpty) mkString "\n"
     
-    print("\b" * pre.length) // delete the last characters ("| ") -- doesn't seem to work on mac/idea 
-//    println(pgrm)
+//    print("\b" * pre.length) // delete the last characters ("| ") -- doesn't seem to work on mac/idea 
     println(post + (try {
       val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code))
       pgrm

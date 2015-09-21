@@ -11,6 +11,8 @@ import utils._
  * 
  * TODO interpret (.a.b x) as OpAppR(...)
  * 
+ * TODO tuples
+ * 
  * FIXME prevent this:
  *   a
  *    + b
@@ -33,6 +35,12 @@ import utils._
 
 )
 ^
+
+┌   -- a
+│ 
+└> [1.3] failure: wrong indent
+  
+ 
  
  
  -- not a problem:
@@ -325,6 +333,74 @@ a right-partial application of + :
 
 However, this made the parser unnecessarily complicated, and it also potentially make the language harder to read, so I
 now require parens: (+b)
+
+
+
+
+
+
+:: Alternative Block Syntax
+
+Indented blocks will be interpreted as multiple parameters instead of an imperative block
+Imp blocks could be done with an (possibly override-able) `do` keyword
+
+  foo
+    bar
+    baz
+  ==
+  foo bar baz
+
+  foo do
+    bar
+    baz
+
+
+Alternatively, use `;`, but that's a pity for a space-based syntax...
+It means we don't even actually need the indentations anymore
+
+  foo
+    bar;
+    baz
+
+  if x < y
+    r = sqrt (y - x);
+    print r;
+    r
+    print "nope";
+    0
+
+And how to express a multiline statement? Where does the semi-colon go? (it's ambiguous)
+
+Best is probably to use `do`
+
+
+Or: let statements need no semi; only impure calls do...
+  
+  if x < y
+    r = sqrt (y - x)
+    print r;
+    r
+    print "nope";
+    0
+
+No, that's not clear at all
+
+
+Note: in the old way, it is possible to obtain nice call argument chaining by calling `.app` explicitly:
+
+  foo
+  .app bar
+  .app baz
+
+  map
+  .app ls
+  .app f
+or
+  map
+    ls
+  .app f
+
+
 
 
 

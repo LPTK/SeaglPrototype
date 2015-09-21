@@ -213,18 +213,18 @@ if (x > y)
     foo
   .else
     bar
-"""/*,""" TODO
+""","""
 if (x > y)
   foo
 .else
   bar
-    """*/) -> App(OpAppL(App(App('if, App(OpAppL('x, gt), 'y)), 'foo), els), 'bar),
+""") -> App(OpAppL(App(App('if, App(OpAppL('x, gt), 'y)), 'foo), els), 'bar),
   
     Seq("x > y ? foo .else bar", """
 x > y ?
-    foo
-  .else
-    bar
+  foo
+.else
+  bar
 """) -> App(OpAppL(App(OpAppL(App(OpAppL('x, gt), 'y), qmark), 'foo), els), 'bar)
   )
   
