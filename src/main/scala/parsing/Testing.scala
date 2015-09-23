@@ -39,7 +39,7 @@ object ParserREPL extends App {
   println("Parsing...")
   
   val utf8 =
-    try { System.setOut(new PrintStream(System.out, true, "utf-8")); true }
+    try { System.setOut(new PrintStream(System.out, true, "UTF-8")); true }
     catch { case _: SecurityException => Charset.defaultCharset().name == "UTF-8" }
   
 //  println(Charset.defaultCharset().name())

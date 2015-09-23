@@ -105,17 +105,15 @@ self =>
   def pgrm = phrase(block(0) <~ emptyLines)
 
   /** Block of code indented at `ind` */
-  def block(ind: Int): Parser[Term] = "block" !!! {
-    val st = State(ind, false)
-    (emptyLines ~> atIndent(ind) ~> stmt(st)) ~ rep(newLine ~> emptyLines ~> atIndent(ind) ~> stmt(st)) ^^ {
-      case stmt ~ stmts => Block(stmt :: stmts)
+  def block(ind: Int): Parser[Term] = "block" !!! indentedLines(ind, stmt(State(ind, false))) ^^ Block.apply
+  
+  def indentedLines[T](ind: Int, p: Parser[T]): Parser[List[T]] = 
+    (emptyLines ~> atIndent(ind) ~> p) ~ rep(newLine ~> emptyLines ~> atIndent(ind) ~> p) ^^ {
+      case x ~ xs => x :: xs
     }
-  }
+  
   def lambdaBlock(ind: Int): Parser[Lambda] =
-    (emptyLines ~> atIndent(ind) ~> "|" ~> space.? ~> lambdaBranch(State(ind, true))) ~ rep(newLine ~>
-     emptyLines ~> atIndent(ind) ~> "|" ~> space.? ~> lambdaBranch(State(ind, true))) ^^ {
-      case br ~ brs => Lambda(br :: brs)
-    }
+    indentedLines(ind, "|" ~> space.? ~> lambdaBranch(State(ind, true))) ^^ Lambda.apply
   
   def air[T](p: Parser[T]) = space.? ~> p <~ space.?
   
@@ -139,7 +137,7 @@ self =>
   implicit class MkTilde[A](a: A) {
     def ~~[B](b: B) = self.~(a, b)
   }
-  
+
   def ReduceOps: (Term ~ List[Operator ~ Option[Term]]) => Term = {
     case t ~ Nil => t
     case t ~ ((op ~ None) :: ls) => ReduceOps(OpAppL(t, op) ~~ ls)
@@ -458,6 +456,20 @@ confusing, in the presence of IOR
 Problem: using the previous rules for op spacing, `a[op] b[op] c` will resolve to `(a[op]) (b[op]) c`
 It's important for method ops, in things like `a.foo b.x c`
 ..could use a rule for non-method ops to not bind this way
+
+
+TODO: disallow multiline parens and use paren block continuation instead
+Syntax: \)
+Can be combined with implicit operator repetition
+
+  print (a, b, \)
+    foo,
+     bar
+  
+  print (a, b,\)
+    foo
+    bar
+
 
 
 */
