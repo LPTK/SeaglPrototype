@@ -54,7 +54,7 @@ class Lexer extends Lexical {
 //  def whitespace: Parser[Any] = rep(('-' ~ '-' | '/' ~ '/') ~ anyBut('\n', EofCh).* ~ (accept(EofCh) | '\n'))
   
   /** Characters in operators */
-  def opChar = elem("opchar", ch => !ch.isLetterOrDigit && ch != ' ' && !keychars(ch) && ch != '\n')
+  def opChar = elem("opchar", ch => !ch.isLetterOrDigit && !(keychars + ' ' + '\n' + '\r')(ch))
 
   def ident = letter ~ (letter | digit).* ^^ { case l ~ chs => l :: chs mkString ""}
   
@@ -78,7 +78,8 @@ class Lexer extends Lexical {
 //    | accept("=>") ^^ { c => Keyword(c.toString) }
     | '=' ~ '>' ^^ { c => Keyword("=>") }
     
-    | '\n' ^^ { _ => NewLine }
+    | rep1(accept('\n') | '\r') ^^^ NewLine  // Most commonly, I believe, '\n' | '\r' ~ '\n' | '\r'
+
     | acceptIf(keychars)(ch => s"$ch is not a keyword") ^^ { c => Keyword(c.toString) }
 //    | EofCh ^^^ EOF // what's the use of this?!
     | rep1(opChar) ^^ (_ mkString "") ^^ SymbolOperator//^^ { chars => SymbolOperator(chars mkString "") }
