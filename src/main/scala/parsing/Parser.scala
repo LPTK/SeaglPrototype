@@ -20,6 +20,8 @@ import utils._
  *      bar
  *      baz
  * 
+ * TODO operator precedence?
+ * 
  * FIXME prevent this:
  *   a
  *    + b
@@ -417,6 +419,45 @@ or
 
 
 
+TODO: implicit operator repetition
+
+A trailing `\[op]` introduces a list of indented blocks interpreted as a list of terms joined by [op].
+We define `[op]\` as `[op] \[op]`
+
+Examples:
+
+  foo = \+
+    bar
+    baz
+    bal
+    
+  // ie
+  
+  foo =
+    bar
+    + baz
+    + bal
+  
+  
+  map .app\
+    ls
+    f
+
+Most importantly, comma `,` is defined as a normal operator, and can consequently be used that way
+Note: This makes it important to find a good replacement for '=' in named argument binding, as otherwise it will be very
+confusing, in the presence of IOR
+
+  graph.render <| 0, 0, "My Graph", autoSized := true, color := `Green
+  
+  graph.render <| 0, 0,\
+    "My Graph"
+    autoSized := true
+    color := `Green
+  
+  
+Problem: using the previous rules for op spacing, `a[op] b[op] c` will resolve to `(a[op]) (b[op]) c`
+It's important for method ops, in things like `a.foo b.x c`
+..could use a rule for non-method ops to not bind this way
 
 
 */

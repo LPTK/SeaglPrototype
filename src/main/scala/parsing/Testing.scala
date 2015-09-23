@@ -78,7 +78,7 @@ object ParserREPL extends App {
       pgrm
     } catch {
       case Parser.lexical.ParseException(msg) => "Parse error: " + msg
-      case _ => ???
+//      case e: Throwable => throw e // unnecessary
     }))
     
     // TODO: better handling of the parsed value

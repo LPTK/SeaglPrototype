@@ -47,7 +47,7 @@ class Lexer extends Lexical {
 //    elem("any but", ch => !(chs contains ch))
     elem("any char but "+(chs map (_.toInt) mkString ","), !chs.toSet)
   
-  val keychars = Set('(', ')', '.', ';', '|', '=')
+  val keychars = Set('(', ')', '.', ';', '|', '=', '\\')
 
   def whitespace: Parser[Null] = Parser(in => Success(null, in))
 //  def whitespace: Parser[Any] = rep(('-' ~ '-' | '/' ~ '/') ~ anyBut('\n').* ~ '\n') // doesn't seem to work!?
