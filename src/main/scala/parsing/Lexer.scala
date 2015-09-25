@@ -92,6 +92,8 @@ class Lexer extends Lexical {
   
   case class ParseException(msg: Str) extends Exception(msg)
   
+  override def letter = elem("letter", _.isLetter) // SUPER WEIRD: ScalaJS fails to recognize letters without this!
+  
 }
 
 

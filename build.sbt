@@ -1,4 +1,12 @@
-scalaVersion := "2.11.4"
+
+enablePlugins(ScalaJSPlugin)
+
+scalaVersion := "2.11.7"
+
+organization := "io.github.lptk"
+
+version := "0.1-SNAPSHOT"
+
 
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.3"
 
@@ -15,6 +23,7 @@ libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test"
 //connectInput in run := true
 
 //javaOptions in run += "-Dfile.encoding=UTF-8"
+
 
 
 
