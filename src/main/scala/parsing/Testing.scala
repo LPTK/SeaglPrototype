@@ -298,7 +298,37 @@ Problem of the approach...
     ).else
         baz
 
+ // ie:
+ 
+    (x > y ? foo) .else (x < y ? bar) .else baz
+ 
+
 Solution: use an .elif function (just like in python)
+Doesn't really solve the problem...:
+
+    if (x > y)
+      foo
+    .elif (x < y)
+      bar
+    .else
+      baz
+    
+    (x > y ? foo) .elif ((x < y) bar) .else baz
+
+Only works if we use the -better- (?) syntax and define elif as taking TWO options (instead) of an option, a bool and a value:
+
+    x > y ?
+      foo
+    .elif x < y ?
+      bar
+    .else
+      baz
+    
+    (x > y ? foo) .elif (x < y ? bar) .else baz
+    
+Nice!
+Note: our definition of (.elif) is _exactly_ the same as Scala's (.orElse)
+
 
 
 Idea: use {} to escape pattern-mode and write in expression mode

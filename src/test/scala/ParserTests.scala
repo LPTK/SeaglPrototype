@@ -41,23 +41,20 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     )
   }
   
-  "parsing app" should "work" in {
-    
-    tests(
-    
-      Seq("a b", "a(b)", "(a)b", "(a)(b)", "(a) (b)") -> App('a, 'b),
-    
-      Seq("a b c", "(a b)c") -> App(App('a, 'b), 'c),
-    
-      Seq("a (b c)", "a (b)(c)") -> App('a, App('b, 'c)),
-    
-      "a b c d" -> App(App(App('a, 'b), 'c), 'd),
-      "a (b c) d" -> App(App('a, App('b, 'c)), 'd),
-    
-      "a b" -> App('a, 'b)
-    )
-    
-  }
+  "parsing app" should "work" in tests(
+  
+    Seq("a b", "a(b)", "(a)b", "(a)(b)", "(a) (b)") -> App('a, 'b),
+  
+    Seq("a b c", "(a b)c") -> App(App('a, 'b), 'c),
+  
+    Seq("a (b c)", "a (b)(c)") -> App('a, App('b, 'c)),
+  
+    "a b c d" -> App(App(App('a, 'b), 'c), 'd),
+    "a (b c) d" -> App(App('a, App('b, 'c)), 'd),
+  
+    "a b" -> App('a, 'b)
+  )
+  
 
   "parsing partial operator app" should "work" in tests(
     
@@ -69,7 +66,17 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   
     Seq("(.foo)"/*, "(\n .foo \n)" FIXME*/) -> OpTerm(foo),
   
-    Seq("(.foo x)", "(.foo\n x)") -> OpAppR(foo, 'x)
+    Seq("(.foo x)", "(.foo\n x)") -> OpAppR(foo, 'x),
+  
+  
+    // Precedence with operators
+  
+    Seq("a b .foo c d", "(a b).foo(c d)") -> App(OpAppL(App('a,'b), foo), App('c, 'd)),
+    
+    // Because of the stick-rule, `a.foo` is bound more stringly than `a .foo` in `a .foo b`, which means the operator
+    // loses its separation function.
+    // It's probably the right thing to do since one would expect `ls.fold z f` to parse like `(ls.fold) z f`.
+    Seq("(a .foo c) d", "(a.foo) c d", "a.foo c d") -> App(App(OpAppL('a, foo), 'c), 'd)
   
     
   )
@@ -90,8 +97,34 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   
     Seq("a + b + c", "a\n + b\n + c", "a\n +b\n +c", "a \n +b \n +c", "a\n+ b\n+ c") -> apb_pc,
   
-    Seq("a + b+c", "a\n + b\n  + c") -> ap_bpc
+    Seq("a + b+c", "a\n + b\n  + c") -> ap_bpc,
     
+    Seq("(a.foo d).bar", "a.foo d .bar", "a .foo d .bar",
+"""
+a
+.foo
+ d
+.bar""",
+"""
+a
+.foo
+  d
+.bar""") -> OpAppL(App(OpAppL('a, foo), 'd), bar),
+      
+    Seq("a.foo (c d) .bar", //FIXME "a.foo c d .bar",
+"""
+a
+.foo c
+ d
+.bar
+""") -> OpAppL(App(OpAppL('a, foo), App('c, 'd)), bar),
+  
+    Seq("(a.foo c) d .bar",
+"""a.foo c
+ d
+.bar
+""") -> OpAppL(App(App(OpAppL('a, foo),'c), 'd), bar)
+  
   )
   
   "parsing blocks" should "work" in tests(
@@ -148,22 +181,25 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   "parsing multiline lambdas" should "work" in {
     val lsmap = App(OpAppL('ls, map), Lambda('a.id -> 'b.id :: 'c.id -> 'd.id :: Nil))
     
-tests(
+    tests(
 
-Seq("""
+    Seq(
+"""
 foo =
 | b =>
   bar =
   | d => e
 """) -> mkBlock(Let('foo, Lambda('b.id -> Block(Let('bar, Lambda('d.id -> 'e.id)) :: Nil, Unit)))),
 
-Seq("""
+    Seq(
+"""
 a
 | b => c
   | d => e
 """) -> App('a, Lambda('b.id -> App('c, Lambda('d.id -> 'e.id)))),
 
-Seq("""
+    Seq(
+"""
 ls.map
 | a => b
 | c => d
@@ -177,7 +213,8 @@ ls.map
     b
   | c => d
 """) -> lsmap,
-Seq("""
+    Seq(
+"""
 foo
 | Some ls => ls.map
   | a => b

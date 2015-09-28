@@ -8,8 +8,9 @@ import utils._
 /**
  * 
  * TODO remove automatic () inference for blocks (probably not useful)
+ * in fact, just make blocks a list of statements, to be treated later?
  * 
- * TODO interpret (.a.b x) as OpAppR(...)
+ * TODOmaybenot interpret (.a.b x) as OpAppR(...)
  * 
  * TODO tuples
  * 
@@ -19,8 +20,54 @@ import utils._
  *    foo;
  *      bar
  *      baz
+ * EDIT: use `;` as a short syntax for let-bindings and impure computations!
+ *   x = 1; y = 2; x + y
+ *   x = 1; y = 2;
+ *     x + y
+ *   // x and y not visible here outside the block
+ * Allow semis in pattern position: they just allow one to define stuff that can be reused
+ *   ls.findFirst{ n = x.getName; x if n == "ok" => n, x }
+ * Could be interpreted as an operator...? no, probably confusing
+ * Require at least an empty statement to finish a block
+ *   a <- foo b
+ *   b = bar;  // implicit unit return here only because of `;` not followed by a block
+ * 
  * 
  * TODO operator precedence?
+ *     http://jim-mcbeath.blogspot.ch/2008/09/scala-parser-combinators.html#precedencerevisited
+ *   Possible?: make |-operators have higher precedence than `;`
+ *     foo <| a = 42; a * 2
+ *   Question: how to handle this:
+ *     
+ * 
+ * TODO indent-based multiline comments
+ *   -- My Doc
+ *    goes on these
+ *    lines...
+ * No, this can be annoying; we may say it only works if followed by nothing - or a \ - or a `-`
+ *   --\
+ *    My Doc
+ *    goes here
+ *   ---
+ *    My Doc
+ *    goes here
+ *   --- My Doc
+ *    goes on these
+ *    lines...
+ *   /// My Doc
+ *    goes on these
+ *    lines...
+ * or simply if it starts as the first non-space on a line?
+ * 
+ * 
+ * 
+ * TODO op right-asociativity
+ Note: scala ref p.85 (http://www.scala-lang.org/docu/files/ScalaReference.pdf)
+If there are consecutive infix operations e0 op1 e1 op2 ... opn en with operators op1, ..., opn of the same precedence,
+then all these operators must have the same associativity. If all operators are left-associative, the sequence is
+interpreted as (... (e0 op1 e1) op2 ...) opn en. Otherwise, if all operators are rightassociative, the sequence is
+interpreted as e0 op1 (e1 op2 (...opn en)...).
+ * 
  * 
  * FIXME prevent this:
  *   a
@@ -28,9 +75,16 @@ import utils._
  *    c
  *    d
  * 
+ * Note: could be useful in some DSLs... not sure if really harmful after all
+ * 
  * 
  * FIXME:
-
+ 
+┌ a >= b
+│ 
+└> [1.7] parsed: {(a >) = b; ()}
+ 
+ 
 ┌   -- COMMENT
 │ a
 │ 
@@ -71,6 +125,18 @@ import utils._
  |  +c
  [3.4] parsed: ((((a +) b) +) c)
  
+ 
+┌ a
+│ .b c
+│  d
+│ 
+└> [3.3] parsed: ((a .b) (c d))
+┌ a
+│ +b c
+│ +d e
+│ 
+└> [3.5] parsed: ((((a +) (b c)) +) (d e))
+ 
  *
  */
 object Parser extends TokenParsers {
@@ -105,7 +171,7 @@ self =>
   def pgrm = phrase(block(0) <~ emptyLines)
 
   /** Block of code indented at `ind` */
-  def block(ind: Int): Parser[Term] = "block" !!! indentedLines(ind, stmt(State(ind, false))) ^^ Block.apply
+  def block(ind: Int): Parser[Term] = "block" ! indentedLines(ind, stmt(State(ind, false))) ^^ Block.apply
   
   def indentedLines[T](ind: Int, p: Parser[T]): Parser[List[T]] = 
     (emptyLines ~> atIndent(ind) ~> p) ~ rep(newLine ~> emptyLines ~> atIndent(ind) ~> p) ^^ {
@@ -117,7 +183,7 @@ self =>
   
   def air[T](p: Parser[T]) = space.? ~> p <~ space.?
   
-  def lambda(implicit st: State): Parser[Lambda] = "lambda" !!! (
+  def lambda(implicit st: State): Parser[Lambda] = "lambda" ! (
     (rep1sep(lambdaBranch(st), air("|")) ^^ Lambda.apply)
   | newLine ~> indented(lambdaBlock, strict = st.inLambda)
   )
@@ -129,7 +195,7 @@ self =>
   
   /** Note: will NOT eat the spaces used for indenting the first line!!! */
   def indented[T](p: Int => Parser[T], strict: Bool = true)(implicit st: State): Parser[T] =
-    "indented" !!! (emptyLines ~> guard(space.?) ^? ({ // TODO better error on not defined
+    "indented" ! (emptyLines ~> guard(space.?) ^? ({ // TODO better error on not defined
       case Some(n) if n > st.ind || (!strict && n == st.ind) => n
       case None if st.ind == 0 && !strict => 0
     }, _ => "block needs to be indented") into p)
@@ -144,12 +210,12 @@ self =>
     case t ~ ((op ~ Some(t2)) :: ls) => ReduceOps(App(OpAppL(t, op), t2) ~~ ls)
   }
   
-  def compactTerm(implicit st: State): Parser[Term] = "compTerm" !!! (rep1(
+  def compactTerm(implicit st: State): Parser[Term] = "compTerm" ! (rep1(
     subTerm ~ rep1(operator ~ subTerm.?) ^^ ReduceOps
   | subTerm
   ) ^^ { _ reduceLeft App })
   
-  def subTerm(implicit st: State): Parser[Term] = "subTerm" !!! (rep1(
+  def subTerm(implicit st: State): Parser[Term] = "subTerm" ! (rep1(
     symbol ^^ Id
   | acceptMatch("string litteral", {case StrLit(str) => Literal(str)})
   | acceptMatch("int litteral", {case IntLit(n) => Literal(n)})
@@ -165,18 +231,22 @@ self =>
     rep1sep(compactTerm, space) <~ space.? ^^ { _ reduceLeft App }
   
   /** Note: not sure if multiLine param useful */ 
-  def term(multiLine: Bool)(implicit st: State): Parser[Term] = "term" !!! ((rep1sep(
+  def term(multiLine: Bool)(implicit st: State): Parser[Term] = "term" ! ((rep1sep(
     spaceAppsTerm ~ rep(air(operator) ~ spaceAppsTerm.?) ^^ ReduceOps
   // TODO op term here
   , space) <~ space.? ^^ { _ reduceLeft App })
   ~ (if (multiLine) newLine ~> indented(block) else nothing).? ^^ {
     case t ~ None => t
     case t1 ~ Some(t2) => App(t1, t2)
-  } | (if (multiLine) newLine ~> indented(block) else nothing)) // TODO prettify/simplify this mess
+  }) //| (if (multiLine) newLine ~> indented(block) else nothing)) // TODO prettify/simplify this mess
   
-  def genTerm(implicit st: State): Parser[Term] = "genTerm" !!! (rep1sep(
+//  def genTerm(implicit st: State): Parser[Term] = "genTerm" !! (rep1sep(
+  def genTerm(implicit st: State, trailingOp: Bool = false): Parser[Term] = "genTerm" !! (rep1sep(
     lambda
-  | "nl op" !!! ((term(true) <~ newLine) ~ indented(opBlock, strict = false) ^^ {
+  | "nl op" ! ((
+        (term(true) <~ newLine) ~ indented(opBlock, strict = false)
+//      | (term(true ) <~ newLine) ~ indented(opBlock, strict = false)
+      ) ^^ {
       case t1 ~ op_ts => op_ts.foldLeft(t1) {
         case(tacc, ops ~ to) => 
           val opst = ops.foldLeft(tacc){case(tacc, op) => OpAppL(tacc, op)}
@@ -184,17 +254,18 @@ self =>
       }
     })
   | term(true)
+  | newLine ~> indented(block, !trailingOp)
   , space.?) <~ space.? ^^ { _ reduceLeft App })
   
-  def opBlock(n: Int)(implicit st: State) =
-    rep1sep((atIndent(n) ~> rep1(air(operator)) <~ space.?) ~ genTerm(State(n+1, false)).?, newLine)
+  def opBlock(n: Int)(implicit st: State) = "opBlock" !! 
+    rep1sep((atIndent(n) ~> rep1(air(operator)) <~ space.?) ~ genTerm(State(n+1, false), true).?, newLine)
   
-  def stmt(implicit st: State): Parser[Stmt] = "stmt" !!! (rep1sep(let | genTerm, air(";")) ^^ {
+  def stmt(implicit st: State): Parser[Stmt] = "stmt" ! (rep1sep(let | genTerm, air(";")) ^^ {
     case stmt :: Nil => stmt
     case ls => Block(ls)
   })
   
-  def let(implicit st: State): Parser[Stmt] = "let" !!! ((term(false) <~ air("=")) ~ genTerm) ^^ {
+  def let(implicit st: State): Parser[Stmt] = "let" ! ((term(false) <~ air("=")) ~ genTerm) ^^ {
     case a ~ b => Let(a, b)
   }
   
@@ -255,8 +326,9 @@ self =>
   }
 
   implicit class Wrapper(val name: String) {
-//    def !!![T](parser: Parser[T]) = new Wrap(name, parser)
-    def !!![T](parser: Parser[T]) = parser
+//    def !![T](parser: Parser[T]) = new Wrap(name, parser)
+    def !![T](parser: Parser[T]) = parser
+    def ![T](parser: Parser[T]) = parser
   }
   
 }
@@ -469,7 +541,40 @@ Can be combined with implicit operator repetition
   print (a, b,\)
     foo
     bar
+  
+  
+Note:
+  print (\,)
+    a
+    b
+    foo
+    bar
+is useless... just use:
+  print \,
+    a
+    b
+    foo
+    bar
 
+
+
+
+:: A way to view commas as an operator
+
+Main requirement is to remove the stuck-to rule for some ops: `a, b, c` == `(a, b), c` and not `(a,) (b,) c`
+
+Otherwise, we'd need complex type hacking (redefining .apply for the result of (x,))
+The basic idea would be:
+
+  (,) x = `Comma x
+  app (`Comma x) =
+  | `Comma y => `Comma (Pair x y)
+  | z => Pair x z
+  
+But note that we still have:
+  f a, b, c  ==  (f (a ,)) (b ,) c
+
+... which makes the whole idea collapse (it would be a very surprising/unintuitive behavior)
 
 
 */
