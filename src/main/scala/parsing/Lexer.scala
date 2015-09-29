@@ -23,9 +23,22 @@ class Lexer extends Lexical {
   case class Symbol(s: String) extends Token {
     def chars = s
   }
-  sealed trait Operator extends Token
-  case class SymbolOperator(chars: String) extends Operator
+  sealed trait Operator extends Token {
+    def sticking: Bool = this match {
+      case SymbolOperator(s) if s startsWith "," => false
+      case _ => true
+    }
+    lazy val precedence = this match {
+      case SymbolOperator(str) =>
+        precedenceGroups getOrElse (str(0), 0)
+      case MethodOperator(_) => precedenceGroupsNumber
+    }
+  }
+  case class SymbolOperator(chars: String) extends Operator {
+    require(chars.length > 0)
+  }
   case class MethodOperator(name: String) extends Operator {
+    require(name.length > 0)
     def chars = "." + name
   }
   case class Keyword(s: String) extends Token {
@@ -93,6 +106,22 @@ class Lexer extends Lexical {
   case class ParseException(msg: Str) extends Exception(msg)
   
   override def letter = elem("letter", _.isLetter) // SUPER WEIRD: ScalaJS fails to recognize letters without this!
+  
+  /** Assigns a precedence to these groups of characters, from 1 to precedenceGroupsNumber */
+  val precedenceGroups = Seq(
+    ",", // precedence 1
+    "|",
+    "^",
+    "&",
+    "<>",
+    "=!",
+    ":",
+    "+-",
+    "*/%" // precedence precedenceGroupsNumber
+  ).iterator.zipWithIndex flatMap {case(ks,v) => ks.map(_ -> (v+1))} toMap
+  val precedenceGroupsNumber = precedenceGroups.values.toSet.size
+  /** precedenceGroupsNumber for methods, 0 for all non-listed ops */
+  val precedenceLevels = 0 to precedenceGroupsNumber
   
 }
 

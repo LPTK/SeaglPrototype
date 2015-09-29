@@ -49,7 +49,7 @@ object ParserREPL extends App {
     else
       ("> ", "| ", "")
   
-  val BreakOut = new Exception()
+  val BreakOut = new Exception
   
   try while (true) {
 //    print("> ")
@@ -69,12 +69,15 @@ object ParserREPL extends App {
 //    val pre = "│ "
     
 //    val code = Iterate continually readLine takeWhile (_.nonEmpty) mkString "\n"
-    val code = Iterate(readLine()) ++ (Iterate continually {print(pre); System.out.flush(); readLine()}
+    val code = Iterate(readLine()) ++ (
+      Iterate continually {print(pre); System.out.flush(); readLine()}
     ) map (str => if (str == null) throw BreakOut else str) takeWhile (_.nonEmpty) mkString "\n"
     
 //    print("\b" * pre.length) // delete the last characters ("| ") -- doesn't seem to work on mac/idea 
     println(post + (try {
-      val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code))
+//      val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code))
+      import Parser._
+      val pgrm = phrase(compactTerm(State(0, false)))(new lexical.Scanner(code))
       pgrm
     } catch {
       case Parser.lexical.ParseException(msg) => "Parse error: " + msg

@@ -17,8 +17,8 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   
 //  val plus = Parser.lexical.SymbolOperator("+")
 //  val minus = Parser.lexical.SymbolOperator("-")
-  val List(plus, minus, gt, qmark) =
-    List("+", "-", ">", "?") map Parser.lexical.SymbolOperator
+  val List(plus, minus, times, gt, qmark) =
+    List("+", "-", "*", ">", "?") map Parser.lexical.SymbolOperator
   
   val List(foo, bar, map, els) = List("foo", "bar", "map", "else") map Parser.lexical.MethodOperator
   
@@ -66,9 +66,10 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   
     Seq("(.foo)"/*, "(\n .foo \n)" FIXME*/) -> OpTerm(foo),
   
-    Seq("(.foo x)", "(.foo\n x)") -> OpAppR(foo, 'x),
+    Seq("(.foo x)", "(.foo\n x)") -> OpAppR(foo, 'x)
   
-  
+  )
+  "precedence" should "work" in tests(
     // Precedence with operators
   
     Seq("a b .foo c d", "(a b).foo(c d)") -> App(OpAppL(App('a,'b), foo), App('c, 'd)),
@@ -76,8 +77,12 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     // Because of the stick-rule, `a.foo` is bound more stringly than `a .foo` in `a .foo b`, which means the operator
     // loses its separation function.
     // It's probably the right thing to do since one would expect `ls.fold z f` to parse like `(ls.fold) z f`.
-    Seq("(a .foo c) d", "(a.foo) c d", "a.foo c d") -> App(App(OpAppL('a, foo), 'c), 'd)
+    Seq("(a .foo c) d", "(a.foo) c d", "a.foo c d") -> App(App(OpAppL('a, foo), 'c), 'd),
   
+    Seq("a+b+c") -> App(OpAppL(App(OpAppL('a, plus), 'b), plus), 'c),
+    Seq("a*b+c") -> App(OpAppL(App(OpAppL('a, times), 'b), plus), 'c),
+    Seq("a+b*c") -> App(OpAppL('a, plus), App(OpAppL('b, times), 'c)),
+    Seq("a+b.foo*c") -> App(OpAppL('a, plus), App(OpAppL(OpAppL('b,foo), times), 'c))
     
   )
   

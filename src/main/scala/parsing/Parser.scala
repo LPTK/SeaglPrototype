@@ -165,6 +165,7 @@ self =>
   def operator: Parser[Operator] = acceptMatch("operator", {
     case op: Operator => op
   })
+  def operatorAtLevel(lvl: Int): Parser[Operator] = operator ^? { case op if op.precedence == lvl => op }
   
   def emptyLines: Parser[Unit] = rep(space.? ~ newLine) ^^^ ()
   
@@ -188,7 +189,8 @@ self =>
   | newLine ~> indented(lambdaBlock, strict = st.inLambda)
   )
   
-  def lambdaBranch(implicit st: State): Parser[(Term, Term)] = (term(false) <~ air("=>")) ~ genTerm(st) ^^ {case(a~b) => (a,b)}
+  def lambdaBranch(implicit st: State): Parser[(Term, Term)] =
+    (term(false) <~ air("=>")) ~ genTerm(st) ^^ {case(a~b) => (a,b)}
   
   def atIndent(ind: Int): Parser[Unit] =
     space.? ^? ({ case Some(n) if n == ind =>  case None if ind == 0 => }, _ => "wrong indent")
@@ -210,8 +212,14 @@ self =>
     case t ~ ((op ~ Some(t2)) :: ls) => ReduceOps(App(OpAppL(t, op), t2) ~~ ls)
   }
   
-  def compactTerm(implicit st: State): Parser[Term] = "compTerm" ! (rep1(
-    subTerm ~ rep1(operator ~ subTerm.?) ^^ ReduceOps
+  def binary(precLevel: Int, subParser: Parser[Term])(implicit st: State): Parser[Term] = s"binary($precLevel)" ! (
+    if (precLevel > precedenceLevels.last) subParser
+    else binary(precLevel+1, subParser) ~ rep(operatorAtLevel(precLevel) ~ binary(precLevel+1, subParser).?) ^^ ReduceOps
+  )
+  
+  def compactTerm(implicit st: State): Parser[Term] = "compTerm" !! (rep1(
+//    subTerm ~ rep1(operator ~ subTerm.?) ^^ ReduceOps
+    binary(precedenceLevels.head, subTerm)
   | subTerm
   ) ^^ { _ reduceLeft App })
   
@@ -220,7 +228,7 @@ self =>
   | acceptMatch("string litteral", {case StrLit(str) => Literal(str)})
   | acceptMatch("int litteral", {case IntLit(n) => Literal(n)})
   | "(" ~ ")" ^^^ Unit
-  | ("(" ~> air(genTerm(State(st.ind, false))) <~ ")") // TODO ( + newline ...
+  | ("(" ~> air(genTerm(State(st.ind, false))) <~ ")") // TODOnot ( + newline ... <- actually it's nice NOT to support it
   | ("(" ~> air(operator) ~ genTerm(State(0, false)).? <~ space.? <~ ")") ^^ {
       case op ~ None => OpTerm(op)
       case op ~ Some(t) => OpAppR(op, t)
