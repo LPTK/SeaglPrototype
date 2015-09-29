@@ -7,7 +7,6 @@ import utils._
 
 /*
 Next:
-  non-sticking ops
   expression semi-colon
 */
 /**
@@ -170,10 +169,10 @@ self =>
   def operator: Parser[Operator] = acceptMatch("operator", {
     case op: Operator => op
   })
-  def operatorAtLevel(lvl: Int, reverseForMethods: Bool = false): Parser[Operator] = operator ^? ({
-    case op: MethodOperator if reverseForMethods && lvl == precedenceLevels.head => op
-    case op: MethodOperator if !reverseForMethods && op.precedence == lvl => op
-    case op: SymbolOperator if op.precedence == lvl => op
+  def operatorAtLevel(lvl: Int, spaced: Bool = false): Parser[Operator] = operator ^? ({
+    case op: MethodOperator if spaced && lvl == precedenceLevels.head => op
+    case op: MethodOperator if !spaced && op.precedence == lvl => op
+    case op: SymbolOperator if op.precedence == lvl && (spaced || op.sticking) => op
   }, op => s"Wrong precedence for $op")
 //  if (reverseForMethods) operator ^? ({
 //    case op: MethodOperator if lvl == precedenceLevels.head => op
@@ -227,7 +226,9 @@ self =>
   
   def opAppLefts(subParser: Parser[Term], precLevel: Int = precedenceLevels.head)(implicit st: State): Parser[Term] = s"binary($precLevel)" ! (
     if (precLevel > precedenceLevels.last) subParser
-    else opAppLefts(subParser, precLevel+1) ~ rep(operatorAtLevel(precLevel) ~ opAppLefts(subParser, precLevel+1).?) ^^ ReduceOps
+    else opAppLefts(subParser, precLevel+1) ~ rep(
+      operatorAtLevel(precLevel) ~ opAppLefts(subParser, precLevel+1).?
+    ) ^^ ReduceOps
   )
   
   def compactTerm(implicit st: State): Parser[Term] = "compTerm" !! (rep1(

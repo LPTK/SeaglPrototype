@@ -26,7 +26,7 @@ class Lexer extends Lexical {
   sealed trait Operator extends Token {
     def sticking: Bool = this match {
       case SymbolOperator(s) if s startsWith "," => false
-      case _ => true
+      case _ => true // Note: will have no effect for a MethodOperator enyway (see `operatorAtLevel`)
     }
     lazy val precedence = this match {
       case SymbolOperator(str) =>

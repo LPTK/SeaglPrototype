@@ -17,8 +17,8 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   
 //  val plus = Parser.lexical.SymbolOperator("+")
 //  val minus = Parser.lexical.SymbolOperator("-")
-  val List(plus, minus, times, gt, qmark) =
-    List("+", "-", "*", ">", "?") map Parser.lexical.SymbolOperator
+  val List(plus, minus, times, gt, qmark, comma) =
+    List("+", "-", "*", ">", "?", ",") map Parser.lexical.SymbolOperator
   
   val List(foo, bar, map, els) = List("foo", "bar", "map", "else") map Parser.lexical.MethodOperator
   
@@ -70,7 +70,7 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     Seq("(.foo)"/*, "(\n .foo \n)" FIXME*/) -> OpTerm(foo),
   
     Seq("(.foo x)", "(.foo\n x)") -> OpAppR(foo, 'x)
-  
+    
   )
   "precedence" should "work" in tests(
     // Precedence with operators
@@ -93,7 +93,12 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     Seq("1 + a .foo", "(1 + a).foo") -> OpAppL(bin(Literal(1), plus, 'a), foo),
     Seq("a+b .foo b*c", "(a+b).foo b*c", "(a+b).foo(b*c)", "a+b .foo b * c", "a + b .foo b * c") ->
       bin(bin('a,plus,'b), foo, bin('b, times, 'c)),
-    Seq("a+b.foo*c") -> App(OpAppL('a, plus), App(OpAppL(OpAppL('b,foo), times), 'c))
+    Seq("a+b.foo*c") -> App(OpAppL('a, plus), App(OpAppL(OpAppL('b,foo), times), 'c)),
+  
+    // comma is a "non-sticking" operator
+    Seq("a,b,c", "a,b, c", "a, b, c", "a , b , c", "a ,b ,c") -> bin(bin('a, comma, 'b), comma, 'c),
+    Seq(/*"f a,b,c"/*FIXME?*/,*/ "f (a, b, c)") -> App('f, bin(bin('a, comma, 'b), comma, 'c)),
+    Seq("f a, g b, h c", "(f a),(g b),(h c)") -> bin(bin(App('f, 'a), comma, App('g, 'b)), comma, App('h, 'c))
     
   )
   
