@@ -5,6 +5,11 @@ import scala.util.parsing.combinator.syntactical._
 
 import utils._
 
+/*
+Next:
+  non-sticking ops
+  expression semi-colon
+*/
 /**
  * 
  * TODO remove automatic () inference for blocks (probably not useful)
@@ -165,7 +170,15 @@ self =>
   def operator: Parser[Operator] = acceptMatch("operator", {
     case op: Operator => op
   })
-  def operatorAtLevel(lvl: Int): Parser[Operator] = operator ^? { case op if op.precedence == lvl => op }
+  def operatorAtLevel(lvl: Int, reverseForMethods: Bool = false): Parser[Operator] = operator ^? ({
+    case op: MethodOperator if reverseForMethods && lvl == precedenceLevels.head => op
+    case op: MethodOperator if !reverseForMethods && op.precedence == lvl => op
+    case op: SymbolOperator if op.precedence == lvl => op
+  }, op => s"Wrong precedence for $op")
+//  if (reverseForMethods) operator ^? ({
+//    case op: MethodOperator if lvl == precedenceLevels.head => op
+//    case op: SymbolOperator if op.precedence == lvl => op
+//  }, op => s"Wrong precedence for $op") else operator ^? { case op if op.precedence == lvl => op }
   
   def emptyLines: Parser[Unit] = rep(space.? ~ newLine) ^^^ ()
   
@@ -212,14 +225,14 @@ self =>
     case t ~ ((op ~ Some(t2)) :: ls) => ReduceOps(App(OpAppL(t, op), t2) ~~ ls)
   }
   
-  def binary(precLevel: Int, subParser: Parser[Term])(implicit st: State): Parser[Term] = s"binary($precLevel)" ! (
+  def opAppLefts(subParser: Parser[Term], precLevel: Int = precedenceLevels.head)(implicit st: State): Parser[Term] = s"binary($precLevel)" ! (
     if (precLevel > precedenceLevels.last) subParser
-    else binary(precLevel+1, subParser) ~ rep(operatorAtLevel(precLevel) ~ binary(precLevel+1, subParser).?) ^^ ReduceOps
+    else opAppLefts(subParser, precLevel+1) ~ rep(operatorAtLevel(precLevel) ~ opAppLefts(subParser, precLevel+1).?) ^^ ReduceOps
   )
   
   def compactTerm(implicit st: State): Parser[Term] = "compTerm" !! (rep1(
 //    subTerm ~ rep1(operator ~ subTerm.?) ^^ ReduceOps
-    binary(precedenceLevels.head, subTerm)
+    opAppLefts(subTerm)
   | subTerm
   ) ^^ { _ reduceLeft App })
   
@@ -236,13 +249,17 @@ self =>
   ) ^^ { _ reduceLeft App })
   
   def spaceAppsTerm(implicit st: State): Parser[Term] =
-    rep1sep(compactTerm, space) <~ space.? ^^ { _ reduceLeft App }
+//    rep1sep(compactTerm, space) <~ space.? ^^ { _ reduceLeft App }
+    rep1sep(compactTerm, space) ^^ { _ reduceLeft App }
+  
+  def spacedOpAppLefts(precLevel: Int = precedenceLevels.head)(implicit st: State): Parser[Term] = s"spBinary($precLevel)" ! (
+    if (precLevel > precedenceLevels.last) spaceAppsTerm
+    else spacedOpAppLefts(precLevel+1) ~ rep(air(operatorAtLevel(precLevel, true)) ~ spacedOpAppLefts(precLevel+1).?) ^^ ReduceOps
+  )
   
   /** Note: not sure if multiLine param useful */ 
-  def term(multiLine: Bool)(implicit st: State): Parser[Term] = "term" ! ((rep1sep(
-    spaceAppsTerm ~ rep(air(operator) ~ spaceAppsTerm.?) ^^ ReduceOps
-  // TODO op term here
-  , space) <~ space.? ^^ { _ reduceLeft App })
+  def term(multiLine: Bool)(implicit st: State): Parser[Term] = "term" ! (
+    (spacedOpAppLefts() <~ space.?)
   ~ (if (multiLine) newLine ~> indented(block) else nothing).? ^^ {
     case t ~ None => t
     case t1 ~ Some(t2) => App(t1, t2)
@@ -584,6 +601,19 @@ But note that we still have:
 
 ... which makes the whole idea collapse (it would be a very surprising/unintuitive behavior)
 
+
+
+:: MethodOps precedence
+
+They are the _most_ binding when used without space, and the _least_ binding when used with a space!!
+For example:
+  1 + a.f   ==  1 + (a .f)
+  a .f + 1  ==  (1 + a) .f 
+
+That allows to conveniently write inline ITE:
+  x > y ? foo .else bar
+ie
+  ((x > y) ? foo) .else bar
 
 */
 

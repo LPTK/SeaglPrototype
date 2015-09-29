@@ -75,9 +75,9 @@ object ParserREPL extends App {
     
 //    print("\b" * pre.length) // delete the last characters ("| ") -- doesn't seem to work on mac/idea 
     println(post + (try {
-//      val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code))
-      import Parser._
-      val pgrm = phrase(compactTerm(State(0, false)))(new lexical.Scanner(code))
+      val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code))
+//      import Parser._
+//      val pgrm = phrase(compactTerm(State(0, false)))(new lexical.Scanner(code))
       pgrm
     } catch {
       case Parser.lexical.ParseException(msg) => "Parse error: " + msg

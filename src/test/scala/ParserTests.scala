@@ -22,6 +22,8 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   
   val List(foo, bar, map, els) = List("foo", "bar", "map", "else") map Parser.lexical.MethodOperator
   
+  def bin(lhs: Term, op: Parser.lexical.Operator, rhs: Term) = App(OpAppL(lhs, op), rhs)
+  
   
   "parsing id" should "work" in {
     // Note: Starting with an indent is wrong, eg: " a"
@@ -62,7 +64,8 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     Seq("a b+", "a (b+)", "a(b +)") -> App('a, OpAppL('b, plus)),
     Seq("a b+ c", "a (b+) c", "a(b +)c") -> App(App('a, OpAppL('b, plus)), 'c),
   
-    Seq("a .foo +", "a.foo +", "a.foo+") -> OpAppL(OpAppL('a, foo), plus),
+//    Seq("a .foo +", "a.foo +", "a.foo+") -> OpAppL(OpAppL('a, foo), plus), // Wrong precedence
+    Seq("a .foo .bar", "a.foo .bar", "a.foo.bar") -> OpAppL(OpAppL('a, foo), bar),
   
     Seq("(.foo)"/*, "(\n .foo \n)" FIXME*/) -> OpTerm(foo),
   
@@ -77,11 +80,19 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     // Because of the stick-rule, `a.foo` is bound more stringly than `a .foo` in `a .foo b`, which means the operator
     // loses its separation function.
     // It's probably the right thing to do since one would expect `ls.fold z f` to parse like `(ls.fold) z f`.
-    Seq("(a .foo c) d", "(a.foo) c d", "a.foo c d") -> App(App(OpAppL('a, foo), 'c), 'd),
-  
-    Seq("a+b+c") -> App(OpAppL(App(OpAppL('a, plus), 'b), plus), 'c),
-    Seq("a*b+c") -> App(OpAppL(App(OpAppL('a, times), 'b), plus), 'c),
-    Seq("a+b*c") -> App(OpAppL('a, plus), App(OpAppL('b, times), 'c)),
+    Seq("(a .foo c) d", "(a.foo) c d", "a.foo c d") -> App(bin('a, foo, 'c), 'd),
+    Seq("(a b) .foo c", "a b .foo c", "(a b).foo c") -> bin(App('a,'b), foo, 'c),
+    
+    Seq("a+b+c", "a+b+ c", "a+b + c", "a+ b + c", "a +b +c", "a + b + c") -> App(OpAppL(App(OpAppL('a, plus), 'b), plus), 'c),
+    Seq("a*b+c", "a*b+ c", "a*b + c", "a* b + c", "a *b +c", "a * b + c") -> App(OpAppL(App(OpAppL('a, times), 'b), plus), 'c),
+    Seq("a+b*c", "a+ b*c", "a + b*c", "a + b* c", "a +b *c", "a + b * c") -> App(OpAppL('a, plus), App(OpAppL('b, times), 'c)),
+    Seq("a+b.foo*c", "a + b.foo* c", "a + b.foo * c", "a + (b .foo) * c") -> App(OpAppL('a, plus), App(OpAppL(OpAppL('b,foo), times), 'c)),
+    
+    // methods become the least binding when used with spaces
+    Seq("1 + a.foo", "1 + (a .foo)") -> bin(Literal(1), plus, OpAppL('a, foo)),
+    Seq("1 + a .foo", "(1 + a).foo") -> OpAppL(bin(Literal(1), plus, 'a), foo),
+    Seq("a+b .foo b*c", "(a+b).foo b*c", "(a+b).foo(b*c)", "a+b .foo b * c", "a + b .foo b * c") ->
+      bin(bin('a,plus,'b), foo, bin('b, times, 'c)),
     Seq("a+b.foo*c") -> App(OpAppL('a, plus), App(OpAppL(OpAppL('b,foo), times), 'c))
     
   )

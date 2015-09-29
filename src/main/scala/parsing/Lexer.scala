@@ -30,8 +30,8 @@ class Lexer extends Lexical {
     }
     lazy val precedence = this match {
       case SymbolOperator(str) =>
-        precedenceGroups getOrElse (str(0), 0)
-      case MethodOperator(_) => precedenceGroupsNumber
+        precedenceGroups getOrElse (str(0), unlistedOpsPrecedence)
+      case MethodOperator(_) => methodsPrecedence
     }
   }
   case class SymbolOperator(chars: String) extends Operator {
@@ -109,7 +109,8 @@ class Lexer extends Lexical {
   
   /** Assigns a precedence to these groups of characters, from 1 to precedenceGroupsNumber */
   val precedenceGroups = Seq(
-    ",", // precedence 1
+    ",", // precedence 0
+    "?",
     "|",
     "^",
     "&",
@@ -117,11 +118,12 @@ class Lexer extends Lexical {
     "=!",
     ":",
     "+-",
-    "*/%" // precedence precedenceGroupsNumber
-  ).iterator.zipWithIndex flatMap {case(ks,v) => ks.map(_ -> (v+1))} toMap
+    "*/%" // precedence precedenceGroupsNumber-1
+  ).iterator.zipWithIndex flatMap {case(ks,v) => ks.map(_ -> v)} toMap
   val precedenceGroupsNumber = precedenceGroups.values.toSet.size
-  /** precedenceGroupsNumber for methods, 0 for all non-listed ops */
+  /** methodPrecedence=precedenceGroupsNumber+1 for methods, 0 for all non-listed ops */
   val precedenceLevels = 0 to precedenceGroupsNumber
+  val methodsPrecedence, unlistedOpsPrecedence = precedenceGroupsNumber
   
 }
 
