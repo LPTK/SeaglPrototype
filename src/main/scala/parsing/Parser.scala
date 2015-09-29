@@ -7,18 +7,21 @@ import utils._
 
 /*
 Next:
-  expression semi-colon
+  Var bindings are now considered terms; protect against stupid things
+  
+  fix comments: currently +-- does not recognize the comment -- wait, that may actually be desirable
+  we could force -- to be surrounded by spaces to be valic, allowing an operator --... probably not a good idea, though
 */
 /**
  * 
- * TODO remove automatic () inference for blocks (probably not useful)
+ * TODOne remove automatic () inference for blocks (probably not useful)
  * in fact, just make blocks a list of statements, to be treated later?
  * 
  * TODOmaybenot interpret (.a.b x) as OpAppR(...)
  * 
- * TODO tuples
+ * TODOne tuples
  * 
- * TODO semicolon can have weird behaviors; I could force no multiline for genTerm in (rep1sep(let | genTerm, air(";"))
+ * TODOne semicolon can have weird behaviors; I could force no multiline for genTerm in (rep1sep(let | genTerm, air(";"))
  * (maybe, prevent trailing semis?)
  * ie:
  *    foo;
@@ -37,7 +40,7 @@ Next:
  *   b = bar;  // implicit unit return here only because of `;` not followed by a block
  * 
  * 
- * TODO operator precedence?
+ * TODOne operator precedence?
  *     http://jim-mcbeath.blogspot.ch/2008/09/scala-parser-combinators.html#precedencerevisited
  *   Possible?: make |-operators have higher precedence than `;`
  *     foo <| a = 42; a * 2
@@ -184,7 +187,7 @@ self =>
   def pgrm = phrase(block(0) <~ emptyLines)
 
   /** Block of code indented at `ind` */
-  def block(ind: Int): Parser[Term] = "block" ! indentedLines(ind, stmt(State(ind, false))) ^^ Block.apply
+  def block(ind: Int): Parser[Term] = "block" ! indentedLines(ind, genTerm(State(ind, false))) ^^ Block.apply
   
   def indentedLines[T](ind: Int, p: Parser[T]): Parser[List[T]] = 
     (emptyLines ~> atIndent(ind) ~> p) ~ rep(newLine ~> emptyLines ~> atIndent(ind) ~> p) ^^ {
@@ -264,14 +267,16 @@ self =>
   ~ (if (multiLine) newLine ~> indented(block) else nothing).? ^^ {
     case t ~ None => t
     case t1 ~ Some(t2) => App(t1, t2)
-  }) //| (if (multiLine) newLine ~> indented(block) else nothing)) // TODO prettify/simplify this mess
+  })
   
-//  def genTerm(implicit st: State): Parser[Term] = "genTerm" !! (rep1sep(
-  def genTerm(implicit st: State, trailingOp: Bool = false): Parser[Term] = "genTerm" !! (rep1sep(
+  def genTerm(implicit st: State, trailingOp: Bool = false): Parser[Term] =
+    rep1sep(genTermWithoutSemi, air(";")) ^^ Block.apply
+  
+  /** genTerm adds to term: lambdas, newline ops, newline blocks */
+  def genTermWithoutSemi(implicit st: State, trailingOp: Bool = false): Parser[Term] = "genTerm" !! (rep1sep(
     lambda
   | "nl op" ! ((
         (term(true) <~ newLine) ~ indented(opBlock, strict = false)
-//      | (term(true ) <~ newLine) ~ indented(opBlock, strict = false)
       ) ^^ {
       case t1 ~ op_ts => op_ts.foldLeft(t1) {
         case(tacc, ops ~ to) => 
@@ -279,6 +284,7 @@ self =>
           to map (App(opst, _)) getOrElse opst
       }
     })
+  | let
   | term(true)
   | newLine ~> indented(block, !trailingOp)
   , space.?) <~ space.? ^^ { _ reduceLeft App })
@@ -286,18 +292,19 @@ self =>
   def opBlock(n: Int)(implicit st: State) = "opBlock" !! 
     rep1sep((atIndent(n) ~> rep1(air(operator)) <~ space.?) ~ genTerm(State(n+1, false), true).?, newLine)
   
-  def stmt(implicit st: State): Parser[Stmt] = "stmt" ! (rep1sep(let | genTerm, air(";")) ^^ {
-    case stmt :: Nil => stmt
-    case ls => Block(ls)
-  })
+//  def stmt(implicit st: State): Parser[Stmt] = "stmt" ! (rep1sep(let | genTerm, air(";")) ^^ {
+//    case stmt :: Nil => stmt
+//    case ls => Block(ls)
+//  })
   
-  def let(implicit st: State): Parser[Stmt] = "let" ! ((term(false) <~ air("=")) ~ genTerm) ^^ {
+//  def let(implicit st: State): Parser[Term] = "let" ! ((termWithoutSemis(false) <~ air("=")) ~ genTerm) ^^ {
+  def let(implicit st: State): Parser[Term] = "let" ! ((spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi) ^^ {
     case a ~ b => Let(a, b)
   }
   
   
   val init = State(0, false)
-  def repl = phrase(emptyLines ~> (stmt(init) | block(0)) <~ emptyLines)
+//  def repl = phrase(emptyLines ~> (stmt(init) | block(0)) <~ emptyLines)
   
   
   
@@ -374,7 +381,7 @@ object AST {
     override def toString = str
   }
 
-  case class Let(pattern: Term, value: Term) extends Stmt {
+  case class Let(pattern: Term, value: Term) extends Term {//Stmt {
     def str = s"$pattern = $value"
   }
 

@@ -29,9 +29,8 @@ class Lexer extends Lexical {
       case _ => true // Note: will have no effect for a MethodOperator enyway (see `operatorAtLevel`)
     }
     lazy val precedence = this match {
-      case SymbolOperator(str) =>
-        precedenceGroups getOrElse (str(0), unlistedOpsPrecedence)
-      case MethodOperator(_) => methodsPrecedence
+      case SymbolOperator(str) => precedenceGroups getOrElse (str(0), unlistedOpsPrecedence)
+      case MethodOperator(_)   => methodsPrecedence
     }
   }
   case class SymbolOperator(chars: String) extends Operator {
@@ -60,8 +59,8 @@ class Lexer extends Lexical {
 //    elem("any but", ch => !(chs contains ch))
     elem("any char but "+(chs map (_.toInt) mkString ","), !chs.toSet)
   
-  val keychars = Set('(', ')', '.', ';', '|', '=', '\\')
-
+  val keychars = Set('(', ')', ';', '|', '=', '\\')
+  
   def whitespace: Parser[Null] = Parser(in => Success(null, in))
 //  def whitespace: Parser[Any] = rep(('-' ~ '-' | '/' ~ '/') ~ anyBut('\n').* ~ '\n') // doesn't seem to work!?
 //  def whitespace: Parser[Any] = rep(('-' ~ '-' | '/' ~ '/') ~ anyBut('\n', EofCh).* ~ (accept(EofCh) | '\n'))
@@ -112,7 +111,8 @@ class Lexer extends Lexical {
     ",", // precedence 0
     "?",
     "|",
-    "^",
+    ".",
+//    "^",
     "&",
     "<>",
     "=!",
@@ -123,7 +123,7 @@ class Lexer extends Lexical {
   val precedenceGroupsNumber = precedenceGroups.values.toSet.size
   /** methodPrecedence=precedenceGroupsNumber+1 for methods, 0 for all non-listed ops */
   val precedenceLevels = 0 to precedenceGroupsNumber
-  val methodsPrecedence, unlistedOpsPrecedence = precedenceGroupsNumber
+  val methodsPrecedence, unlistedOpsPrecedence = precedenceGroupsNumber // really give them the same prec?
   
 }
 

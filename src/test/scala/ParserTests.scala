@@ -151,7 +151,7 @@ a
   "parsing blocks" should "work" in tests(
   
     Seq("a\n  x = b\n  x a", "a(\n x = b\n x a)") -> App('a, Block(Let('x, 'b)::Nil, App('x, 'a))),
-    Seq("a\nx = b\nx a", "a;x=b;x a") -> Block('a::Let('x, 'b)::Nil, App('x, 'a)),
+    Seq("a\nx = b\nx a", "a;x=b;x a", "a; x=b; x a", "(a; x = b; x a)") -> Block('a::Let('x, 'b)::Nil, App('x, 'a)),
     Seq("a;\n x=b\n x a") -> Block('a::Block(Let('x, 'b)::Nil, App('x, 'a))::Nil),
     
     Seq("map ls\n f") -> App(App('map, 'ls), 'f),
@@ -210,7 +210,7 @@ foo =
 | b =>
   bar =
   | d => e
-""") -> mkBlock(Let('foo, Lambda('b.id -> Block(Let('bar, Lambda('d.id -> 'e.id)) :: Nil, Unit)))),
+""") -> mkBlock(Let('foo, Lambda('b.id -> Block(Let('bar, Lambda('d.id -> 'e.id)) :: Nil)))),
 
     Seq(
 """
