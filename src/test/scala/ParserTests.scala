@@ -107,7 +107,13 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     // comma is a "non-sticking" operator
     Seq("a,b,c", "a,b, c", "a, b, c", "a , b , c", "a ,b ,c") -> bin(bin('a, comma, 'b), comma, 'c),
     Seq(/*"f a,b,c"/*FIXME?*/,*/ "f (a, b, c)") -> App('f, bin(bin('a, comma, 'b), comma, 'c)),
-    Seq("f a, g b, h c", "(f a),(g b),(h c)") -> bin(bin(App('f, 'a), comma, App('g, 'b)), comma, App('h, 'c))
+    Seq("f a, g b, h c", "(f a),(g b),(h c)") -> bin(bin(App('f, 'a), comma, App('g, 'b)), comma, App('h, 'c)),
+  
+    // some SymOps precedence rules
+    "a |> b * c" -> bin('a, SymbolOperator("|>"), bin('b, times, 'c)),
+    "a <| b * c" -> bin('a, SymbolOperator("<|"), bin('b, times, 'c)),
+    "a |* b + c" -> bin('a, SymbolOperator("|*"), bin('b, plus, 'c)),
+    "a *| b + c" -> bin('a, SymbolOperator("*|"), bin('b, plus, 'c))
     
   )
   

@@ -29,7 +29,10 @@ class Lexer extends Lexical {
       case _ => true // Note: will have no effect for a MethodOperator enyway (see `operatorAtLevel`)
     }
     lazy val precedence = this match {
-      case SymbolOperator(str) => precedenceGroups getOrElse (str(0), unlistedOpsPrecedence)
+      case SymbolOperator(str) =>
+//        precedenceGroups getOrElse (str(0), unlistedOpsPrecedence)
+        // Precedence is now the lowest of the precedence of the first and last characters!
+        Set(str.head, str.last) map (precedenceGroups.get) map (_ getOrElse unlistedOpsPrecedence) min
       case MethodOperator(_)   => methodsPrecedence
     }
   }
@@ -72,7 +75,7 @@ class Lexer extends Lexical {
   
   /** Characters in operators */
   def opChar = elem("opchar", ch => !ch.isLetterOrDigit && !(keychars + ' ' + '\n' + '\r')(ch))
-  def genOpChar = opChar | '='
+  def genOpChar = opChar | '=' | '|'
 
   def ident = letter ~ (letter | digit).* ^^ { case l ~ chs => l :: chs mkString ""}
   
