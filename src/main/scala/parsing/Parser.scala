@@ -270,12 +270,13 @@ self =>
   })
   
   def genTerm(implicit st: State, trailingOp: Bool = false): Parser[Term] =
-    rep1sep(genTermWithoutSemi, air(";")) ^^ Block.apply
+//    rep1sep(genTermWithoutSemi, air(";")) ^^ Block.apply
+      rep(genTermWithoutSemi(false) <~ air(";")) ~ genTermWithoutSemi(true) ^^ { case ls ~ t => Block(ls :+ t) }
   
   /** genTerm adds to term: lambdas, newline ops, newline blocks */
-  def genTermWithoutSemi(implicit st: State, trailingOp: Bool = false): Parser[Term] = "genTerm" !! (rep1sep(
+  def genTermWithoutSemi(multiLine: Bool)(implicit st: State, trailingOp: Bool = false): Parser[Term] = "genTerm" !! (rep1sep(
     lambda
-  | "nl op" ! ((
+  | "nl op" ! (if (multiLine) (
         (term(true) <~ newLine) ~ indented(opBlock, strict = false)
       ) ^^ {
       case t1 ~ op_ts => op_ts.foldLeft(t1) {
@@ -283,9 +284,9 @@ self =>
           val opst = ops.foldLeft(tacc){case(tacc, op) => OpAppL(tacc, op)}
           to map (App(opst, _)) getOrElse opst
       }
-    })
+    } else nothing)
   | let
-  | term(true)
+  | term(multiLine)
   | newLine ~> indented(block, !trailingOp)
   , space.?) <~ space.? ^^ { _ reduceLeft App })
   
@@ -298,7 +299,7 @@ self =>
 //  })
   
 //  def let(implicit st: State): Parser[Term] = "let" ! ((termWithoutSemis(false) <~ air("=")) ~ genTerm) ^^ {
-  def let(implicit st: State): Parser[Term] = "let" ! ((spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi) ^^ {
+  def let(implicit st: State): Parser[Term] = "let" ! ((spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi(true)) ^^ {
     case a ~ b => Let(a, b)
   }
   

@@ -153,6 +153,8 @@ a
     Seq("a\n  x = b\n  x a", "a(\n x = b\n x a)") -> App('a, Block(Let('x, 'b)::Nil, App('x, 'a))),
     Seq("a\nx = b\nx a", "a;x=b;x a", "a; x=b; x a", "(a; x = b; x a)") -> Block('a::Let('x, 'b)::Nil, App('x, 'a)),
     Seq("a;\n x=b\n x a") -> Block('a::Block(Let('x, 'b)::Nil, App('x, 'a))::Nil),
+    Seq("a\n b;\n  c") -> App('a, mkBlock('b, 'c)),
+    Seq("a\n +b;\n  c") -> bin('a, plus, mkBlock('b, 'c)),
     
     Seq("map ls\n f") -> App(App('map, 'ls), 'f),
     Seq("map\n ls\n  f") -> App('map, App('ls, 'f)),
@@ -173,6 +175,9 @@ a
      │   .bar  -- trying to apply .bar on .foo; probably not what we want
      └> [3.7] failure: end of input
     */
+    
+    intercept[Exception] { test("a\n b;\n c", null) }
+    intercept[Exception] { test("a\n +b;\n c", null) }
   }
 
   "parsing lambdas" should "work" in tests(
