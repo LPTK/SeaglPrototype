@@ -163,6 +163,9 @@ self =>
   case class State(ind: Int, inLambda: Bool, trailingOp: Bool = false) // TODO rm trailingOp
   
   
+  def mk[A,B,R](f: (A, B) => R)(op: A ~ B) = op match { case a ~ b => f(a,b) }
+  
+  
   def nothing: Parser[Nothing] = acceptIf(_ => false)(_ => "Parser parses nothing") ^^ { _ => wtf }
   
   def space: Parser[Int] = acceptMatch("space", {case Space(n) => n})
@@ -190,9 +193,9 @@ self =>
   def block(ind: Int): Parser[Term] = "block" ! indentedLines(ind, genTerm(State(ind, false))) ^^ Block.apply
   
   def indentedLines[T](ind: Int, p: Parser[T]): Parser[List[T]] = 
-    (emptyLines ~> atIndent(ind) ~> p) ~ rep(newLine ~> emptyLines ~> atIndent(ind) ~> p) ^^ {
+    (emptyLines ~> atIndent(ind) ~> p) ~ rep(newLine ~> emptyLines ~> atIndent(ind) ~> p) ^^ mk(_ :: _) /*{
       case x ~ xs => x :: xs
-    }
+    }*/
   
   def lambdaBlock(ind: Int): Parser[Lambda] =
     indentedLines(ind, "|" ~> space.? ~> lambdaBranch(State(ind, true))) ^^ Lambda.apply
@@ -205,7 +208,7 @@ self =>
   )
   
   def lambdaBranch(implicit st: State): Parser[(Term, Term)] =
-    (term(false) <~ air("=>")) ~ genTerm(st) ^^ {case(a~b) => (a,b)}
+    (term(false) <~ air("=>")) ~ genTerm(st) ^^ mk(_ -> _) //{case(a~b) => (a,b)}
   
   def atIndent(ind: Int): Parser[Unit] =
     space.? ^? ({ case Some(n) if n == ind =>  case None if ind == 0 => }, _ => "wrong indent")
@@ -271,7 +274,7 @@ self =>
   
   def genTerm(implicit st: State, trailingOp: Bool = false): Parser[Term] =
 //    rep1sep(genTermWithoutSemi, air(";")) ^^ Block.apply
-      rep(genTermWithoutSemi(false) <~ air(";")) ~ genTermWithoutSemi(true) ^^ { case ls ~ t => Block(ls :+ t) }
+      rep(genTermWithoutSemi(false) <~ air(";")) ~ genTermWithoutSemi(true) ^^ mk((ls,t) => Block(ls :+ t)) //{ case ls ~ t => Block(ls :+ t) }
   
   /** genTerm adds to term: lambdas, newline ops, newline blocks */
   def genTermWithoutSemi(multiLine: Bool)(implicit st: State, trailingOp: Bool = false): Parser[Term] = "genTerm" !! (rep1sep(
@@ -299,9 +302,11 @@ self =>
 //  })
   
 //  def let(implicit st: State): Parser[Term] = "let" ! ((termWithoutSemis(false) <~ air("=")) ~ genTerm) ^^ {
-  def let(implicit st: State): Parser[Term] = "let" ! ((spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi(true)) ^^ {
-    case a ~ b => Let(a, b)
-  }
+  def let(implicit st: State): Parser[Term] = "let" ! ((spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi(true)) ^^
+    mk(Let)
+//  {
+//    case a ~ b => Let(a, b)
+//  }
   
   
   val init = State(0, false)

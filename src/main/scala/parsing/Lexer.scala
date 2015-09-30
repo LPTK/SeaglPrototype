@@ -65,13 +65,21 @@ class Lexer extends Lexical {
 //  def whitespace: Parser[Any] = rep(('-' ~ '-' | '/' ~ '/') ~ anyBut('\n').* ~ '\n') // doesn't seem to work!?
 //  def whitespace: Parser[Any] = rep(('-' ~ '-' | '/' ~ '/') ~ anyBut('\n', EofCh).* ~ (accept(EofCh) | '\n'))
   
+  def mk[A,B,R](f: (A, B) => R)(op: A ~ B) = op match {
+    case a ~ b => f(a,b) //f(a)(b)
+  }
+  
+  
   /** Characters in operators */
   def opChar = elem("opchar", ch => !ch.isLetterOrDigit && !(keychars + ' ' + '\n' + '\r')(ch))
+  def genOpChar = opChar | '='
 
   def ident = letter ~ (letter | digit).* ^^ { case l ~ chs => l :: chs mkString ""}
   
 //  def error[T](p: Parser[T], msg: Str) = p ~ Parser(in => Error(msg, in)) ^^ (_ => ???)
   def error[T](p: Parser[T], msg: Str) = p ^^ (_ => throw ParseException(msg))
+  
+  def symOp: Parser[Str] = (opChar ~ genOpChar.* | genOpChar ~ rep1(genOpChar)) ^^ mk(_ :: _) ^^ (_ mkString "")
   
   def token: Parser[Token] = (
 //      ('-' ~ '-' | '/' ~ '/') ~ anyBut('\n').* ~ '\n' ^^^ Space(0)
@@ -91,10 +99,11 @@ class Lexer extends Lexical {
     | '=' ~ '>' ^^ { c => Keyword("=>") }
     
     | rep1(accept('\n') | '\r') ^^^ NewLine  // Most commonly, I believe, '\n' | '\r' ~ '\n' | '\r'
-
-    | acceptIf(keychars)(ch => s"$ch is not a keyword") ^^ { c => Keyword(c.toString) }
+    
+    | symOp ^^ SymbolOperator//^^ { chars => SymbolOperator(chars mkString "") }
+    
+    | acceptIf(keychars)(ch => s"$ch is not a keyword") ^^ (_ toString) ^^ Keyword //{ c => Keyword(c.toString) }
 //    | EofCh ^^^ EOF // what's the use of this?!
-    | rep1(opChar) ^^ (_ mkString "") ^^ SymbolOperator//^^ { chars => SymbolOperator(chars mkString "") }
     | ident ^^ Symbol
   )
   // Exceptions are not raised here

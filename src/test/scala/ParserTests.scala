@@ -1,6 +1,7 @@
 package parsing
 
 import org.scalatest.{ FlatSpec, ShouldMatchers }
+import parsing.Parser.lexical.SymbolOperator
 
 import utils._
 import Parser._
@@ -57,7 +58,15 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     "a b" -> App('a, 'b)
   )
   
-
+  "parsing equals-operators" should "work" in tests(
+    "a == b" -> bin('a, SymbolOperator("=="), 'b),
+    "a === b" -> bin('a, SymbolOperator("==="), 'b),
+    "a =/= b" -> bin('a, SymbolOperator("=/="), 'b),
+    "a /= b" -> bin('a, SymbolOperator("/="), 'b),
+    "a =/ b" -> bin('a, SymbolOperator("=/"), 'b),
+    "a /=/ b" -> bin('a, SymbolOperator("/=/"), 'b)
+  )
+  
   "parsing partial operator app" should "work" in tests(
     
     Seq("a +", "a+", "(a+)") -> OpAppL('a, plus),
