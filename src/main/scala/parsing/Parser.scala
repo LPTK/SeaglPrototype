@@ -303,12 +303,15 @@ self =>
 //    case ls => Block(ls)
 //  })
   
+  def binding(implicit st: State): Parser[Term ~ Term] = (spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi(true)
+  
 //  def let(implicit st: State): Parser[Term] = "let" ! ((termWithoutSemis(false) <~ air("=")) ~ genTerm) ^^ {
-  def let(implicit st: State): Parser[Term] = "let" ! ((modifier <~ space.?).? ~ (spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi(true)) ^^
-//    mk(Let)
-  {
-    case mo ~ a ~ b => Let(a, b, mo)
-  }
+  def let(implicit st: State): Parser[Term] = "let" ! (
+    (modifier <~ space.?).? ~ binding ^^ { 
+      case mo ~ (a ~ b) => Let(a, b, mo) }
+  | (modifier <~ space.? ~ newLine) ~ indented(ind => indentedLines(ind, binding(st copy (ind = ind)))) ^^ {
+      case m ~ ls => Block(ls map { case a ~ b => Let(a, b, Some(m)) }) }
+  )
   
   
   val init = State(0, false)
@@ -390,7 +393,7 @@ object AST {
   }
 
   case class Let(pattern: Term, value: Term, modif: Option[Parser.lexical.Modifier] = None) extends Term {//Stmt {
-    def str = s"$pattern = $value"
+    def str = (modif map (_.toString + " ") getOrElse "") + s"$pattern = $value"
   }
 
   

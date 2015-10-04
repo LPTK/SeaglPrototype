@@ -1,7 +1,7 @@
 package parsing
 
 import org.scalatest.{ FlatSpec, ShouldMatchers }
-import parsing.Parser.lexical.SymbolOperator
+import parsing.Parser.lexical.{ SymbolOperator, Value, Type }
 
 import utils._
 import Parser._
@@ -279,9 +279,12 @@ foo
     
     Seq("a = b", "a =\n  b") -> mkBlock(Let('a, 'b)),
     
-    Seq("value a = b", "value a =\n  b") -> mkBlock(Let('a, 'b, Some(Parser.lexical.Value))),
+    Seq("value a = b", "value a =\n  b") -> mkBlock(Let('a, 'b, Some(Value))),
     
-    Seq("type a = b", "type a =\n  b") -> mkBlock(Let('a, 'b, Some(Parser.lexical.Type))),
+    Seq("type a = b", "type a =\n  b") -> mkBlock(Let('a, 'b, Some(Type))),
+  
+    Seq("type a = b; type c = d", "type\n a = b\n c = d", "type\n  a = b\n  c = d") ->
+      mkBlock(Let('a, 'b, Some(Type)), Let('c, 'd, Some(Type))),
   
     Seq("a = b => c | d => e","""
 a =

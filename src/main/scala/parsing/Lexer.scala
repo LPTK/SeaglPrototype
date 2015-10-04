@@ -74,7 +74,8 @@ class Lexer extends Lexical {
   
   def strParse(str: Str): Parser[Unit] = str.tail.foldLeft(accept(str charAt 0) ^^^ ()){case(acc,c) => acc ~ c ^^^ ()}
   
-  sealed trait Modifier extends Token
+  // Note: could use Def/def instead?
+  sealed trait Modifier extends Token { override def toString = chars }
   case object Value extends Modifier { val chars = "value" }
   case object Type extends Modifier { val chars = "type" }
   def modifier: Parser[Modifier] = strParse(Value.chars) ^^^ Value | strParse(Type.chars) ^^^ Type
