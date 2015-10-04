@@ -278,6 +278,10 @@ foo
   "parsing lets" should "work" in tests(
     
     Seq("a = b", "a =\n  b") -> mkBlock(Let('a, 'b)),
+    
+    Seq("value a = b", "value a =\n  b") -> mkBlock(Let('a, 'b, Some(Parser.lexical.Value))),
+    
+    Seq("type a = b", "type a =\n  b") -> mkBlock(Let('a, 'b, Some(Parser.lexical.Type))),
   
     Seq("a = b => c | d => e","""
 a =

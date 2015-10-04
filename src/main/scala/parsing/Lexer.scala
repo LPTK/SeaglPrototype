@@ -72,6 +72,12 @@ class Lexer extends Lexical {
     case a ~ b => f(a,b) //f(a)(b)
   }
   
+  def strParse(str: Str): Parser[Unit] = str.tail.foldLeft(accept(str charAt 0) ^^^ ()){case(acc,c) => acc ~ c ^^^ ()}
+  
+  sealed trait Modifier extends Token
+  case object Value extends Modifier { val chars = "value" }
+  case object Type extends Modifier { val chars = "type" }
+  def modifier: Parser[Modifier] = strParse(Value.chars) ^^^ Value | strParse(Type.chars) ^^^ Type
   
   /** Characters in operators */
   def opChar = elem("opchar", ch => !ch.isLetterOrDigit && !(keychars + ' ' + '\n' + '\r')(ch))
@@ -99,11 +105,13 @@ class Lexer extends Lexical {
     | '"' ~> anyBut('"').* <~ '"' ^^ (_.mkString) ^^ StrLit
     
 //    | accept("=>") ^^ { c => Keyword(c.toString) }
-    | '=' ~ '>' ^^ { c => Keyword("=>") }
+    | strParse("=>") ^^ { c => Keyword("=>") }
     
     | rep1(accept('\n') | '\r') ^^^ NewLine  // Most commonly, I believe, '\n' | '\r' ~ '\n' | '\r'
     
     | symOp ^^ SymbolOperator//^^ { chars => SymbolOperator(chars mkString "") }
+    
+    | modifier
     
     | acceptIf(keychars)(ch => s"$ch is not a keyword") ^^ (_ toString) ^^ Keyword //{ c => Keyword(c.toString) }
 //    | EofCh ^^^ EOF // what's the use of this?!

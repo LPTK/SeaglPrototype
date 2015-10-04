@@ -170,6 +170,8 @@ self =>
   
   def space: Parser[Int] = acceptMatch("space", {case Space(n) => n})
   
+  def modifier: Parser[Modifier] = acceptMatch("modifier", {case Value => Value  case Type => Type})
+  
   def newLine: Parser[Unit] = accept(NewLine) ^^^ ()
   
   def operator: Parser[Operator] = acceptMatch("operator", {
@@ -302,11 +304,11 @@ self =>
 //  })
   
 //  def let(implicit st: State): Parser[Term] = "let" ! ((termWithoutSemis(false) <~ air("=")) ~ genTerm) ^^ {
-  def let(implicit st: State): Parser[Term] = "let" ! ((spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi(true)) ^^
-    mk(Let)
-//  {
-//    case a ~ b => Let(a, b)
-//  }
+  def let(implicit st: State): Parser[Term] = "let" ! ((modifier <~ space.?).? ~ (spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi(true)) ^^
+//    mk(Let)
+  {
+    case mo ~ a ~ b => Let(a, b, mo)
+  }
   
   
   val init = State(0, false)
@@ -387,7 +389,7 @@ object AST {
     override def toString = str
   }
 
-  case class Let(pattern: Term, value: Term) extends Term {//Stmt {
+  case class Let(pattern: Term, value: Term, modif: Option[Parser.lexical.Modifier] = None) extends Term {//Stmt {
     def str = s"$pattern = $value"
   }
 
