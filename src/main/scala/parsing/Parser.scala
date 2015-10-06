@@ -157,8 +157,8 @@ self =>
   implicit def keyword(chars: String): Parser[String] =
     accept(Keyword(chars)) ^^ (_.chars)
 
-  def symbol: Parser[String] =
-    elem("identifier", _.isInstanceOf[Symbol]) ^^ (_.chars)
+  def symbol: Parser[String] = elem("identifier", _.isInstanceOf[Symbol]) ^^ (_.chars)
+  def atom: Parser[String] = elem("atom", _.isInstanceOf[lexical.Atom]) ^^ (_.chars)
   
   case class State(ind: Int, inLambda: Bool, trailingOp: Bool = false) // TODO rm trailingOp
   
@@ -247,6 +247,7 @@ self =>
   
   def subTerm(implicit st: State): Parser[Term] = "subTerm" ! (rep1(
     symbol ^^ Id
+  | atom ^^ Id
   | acceptMatch("string litteral", {case StrLit(str) => Literal(str)})
   | acceptMatch("int litteral", {case IntLit(n) => Literal(n)})
   | "(" ~ ")" ^^^ Unit
@@ -414,6 +415,9 @@ object AST {
   }
   case class Id(s: String) extends Term {
     def str = s"$s"
+  }
+  case class Atom(s: String) extends Term {
+    def str = s"`$s"
   }
   case class App(f: Term, a: Term) extends Term {
     def str = s"($f $a)"

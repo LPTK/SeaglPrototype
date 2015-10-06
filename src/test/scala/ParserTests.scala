@@ -26,12 +26,14 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   def bin(lhs: Term, op: Parser.lexical.Operator, rhs: Term) = App(OpAppL(lhs, op), rhs)
   
   
-  "parsing id" should "work" in {
+  "parsing id & atom" should "work" in {
     // Note: Starting with an indent is wrong, eg: " a"
     
 //    tests("a" -> Id('a), "a " -> Id('a))
     tests(
-      Seq("a", "a ", "a  ", "a--\n", "a -- ,.;'[(\n") -> 'a.id
+      Seq("a", "(a)", "( a )", "a ", "a  ", "a--\n", "a -- ,.;'[(\n") -> 'a.id,
+      Seq("a'", "a' ", "(a')") -> Sym("a'").id,
+      Seq("`a", "`a ", "(`a)") -> Sym("`a").id
     )
     
   }

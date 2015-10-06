@@ -23,6 +23,9 @@ class Lexer extends Lexical {
   case class Symbol(s: String) extends Token {
     def chars = s
   }
+  case class Atom(name: String) extends Token {
+    def chars = "`" + name
+  }
   sealed trait Operator extends Token {
     def sticking: Bool = this match {
       case SymbolOperator(s) if s startsWith "," => false
@@ -64,7 +67,7 @@ class Lexer extends Lexical {
 //    elem("any but", ch => !(chs contains ch))
     elem("any char but "+(chs map (_.toInt) mkString ","), !chs.toSet)
   
-  val keychars = Set('(', ')', ';', '|', '=', '\\')
+  val keychars = Set('(', ')', ';', '|', '=', '\\', '`')
   
   def whitespace: Parser[Null] = Parser(in => Success(null, in))
 //  def whitespace: Parser[Any] = rep(('-' ~ '-' | '/' ~ '/') ~ anyBut('\n').* ~ '\n') // doesn't seem to work!?
@@ -86,7 +89,7 @@ class Lexer extends Lexical {
   def opChar = elem("opchar", ch => !ch.isLetterOrDigit && !(keychars + ' ' + '\n' + '\r')(ch))
   def genOpChar = opChar | '=' | '|'
 
-  def ident = letter ~ (letter | digit).* ^^ { case l ~ chs => l :: chs mkString ""}
+  def ident = letter ~ (letter | digit).* ~ rep(''') ^^ { case l ~ chs ~ primes => (l :: chs) ++ primes mkString "" }
   
 //  def error[T](p: Parser[T], msg: Str) = p ~ Parser(in => Error(msg, in)) ^^ (_ => ???)
   def error[T](p: Parser[T], msg: Str) = p ^^ (_ => throw ParseException(msg))
@@ -111,6 +114,8 @@ class Lexer extends Lexical {
     | strParse("=>") ^^ { c => Keyword("=>") }
     
     | rep1(accept('\n') | '\r') ^^^ NewLine  // Most commonly, I believe, '\n' | '\r' ~ '\n' | '\r'
+    
+    | '`' ~> ident ^^ Atom
     
     | symOp ^^ SymbolOperator//^^ { chars => SymbolOperator(chars mkString "") }
     
