@@ -54,10 +54,7 @@ trait Terms {
       case t: Term => t.print
     }
 
-    sealed trait ValueTerm extends GeneralTerm
-    sealed trait TypeTerm extends GeneralTerm
-
-    sealed trait Term extends ValueTerm with TypeTerm {
+    sealed trait Term extends GeneralTerm {
       override def toString = this.print
     }
 
@@ -83,7 +80,6 @@ trait Terms {
     case class Scoped(node: Node) extends Term with ScopingNode
 
     //    case class Ascribe(v: Node, t: dualWorld.Node) extends ValueTerm
-    case class Ascribe(v: ValueNode, t: TypeNode) extends ValueTerm
 
     /** On another dimension than type/value, dual to expression world is extraction world */
     // trait DualMode[+T]
@@ -103,7 +99,9 @@ trait Terms {
     }
 
   }
-
+  
+  case class Ascribe(v: ValueNode, t: TypeNode) extends values.Term
+  
   sealed trait TypeKind
   case object StarKind extends TypeKind
   case object AtKind extends TypeKind
@@ -132,8 +130,8 @@ trait Terms {
     implicit val nodePrintable: Printable[Node] = stage.valueNodePrintable
   }
 
-  type Type = types.TypeTerm
-  type Value = values.ValueTerm
+  type Type = types.Term
+  type Value = values.Term
 
   type TypeSymbol = types.Symbol
   type ValueSymbol = values.Symbol
