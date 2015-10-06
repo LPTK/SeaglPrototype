@@ -74,15 +74,26 @@ object ParserREPL extends App {
     ) map (str => if (str == null) throw BreakOut else str) takeWhile (_.nonEmpty) mkString "\n"
     
 //    print("\b" * pre.length) // delete the last characters ("| ") -- doesn't seem to work on mac/idea 
-    println(post + (try {
+    post + (try {
       val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code))
 //      import Parser._
 //      val pgrm = phrase(compactTerm(State(0, false)))(new lexical.Scanner(code))
-      pgrm
+      println(pgrm)
+//      import simple._
+//      pgrm match {
+//        case Parser.Success(pgrm, _) =>
+//          val r = try {
+//            Terms.Block(Nil, (Builder.apply _) <|: pgrm)
+//          } catch {
+//            case common.CompileError(msg) => "Compile Error: "+msg
+//          }
+//          println(r)
+//      }
+      
     } catch {
       case Parser.lexical.ParseException(msg) => "Parse error: " + msg
 //      case e: Throwable => throw e // unnecessary
-    }))
+    })
     
     // TODO: better handling of the parsed value
   

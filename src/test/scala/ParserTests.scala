@@ -1,7 +1,7 @@
 package parsing
 
 import org.scalatest.{ FlatSpec, ShouldMatchers }
-import parsing.Parser.lexical.{ SymbolOperator, Value, Type }
+import parsing.Parser.lexical.{ SymbolOperator, ValueModif, TypeModif }
 
 import utils._
 import Parser._
@@ -279,12 +279,12 @@ foo
     
     Seq("a = b", "a =\n  b") -> mkBlock(Let('a, 'b)),
     
-    Seq("value a = b", "value a =\n  b") -> mkBlock(Let('a, 'b, Some(Value))),
+    Seq("value a = b", "value a =\n  b") -> mkBlock(Let('a, 'b, Some(ValueModif))),
     
-    Seq("type a = b", "type a =\n  b") -> mkBlock(Let('a, 'b, Some(Type))),
+    Seq("type a = b", "type a =\n  b") -> mkBlock(Let('a, 'b, Some(TypeModif))),
   
     Seq("type a = b; type c = d", "type\n a = b\n c = d", "type\n  a = b\n  c = d") ->
-      mkBlock(Let('a, 'b, Some(Type)), Let('c, 'd, Some(Type))),
+      mkBlock(Let('a, 'b, Some(TypeModif)), Let('c, 'd, Some(TypeModif))),
   
     Seq("a = b => c | d => e","""
 a =
@@ -317,7 +317,7 @@ x > y ?
   
   
 //  def test(str: Str, expected: Stmt) = parse(str, repl) match {
-  def test(str: Str, expected: Stmt) = parse(str, pgrm) match {
+  def test(str: Str, expected: Term) = parse(str, pgrm) match {
     case Success(t, _) => assert(t == expected)
     case r @ NoSuccess(err, _) =>
       if (expected != null) println(r)

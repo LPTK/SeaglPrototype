@@ -9,32 +9,64 @@ package object utils {
   type Sym = Symbol
   val Sym = Symbol
   
+  type Ls[+T] = List[T]
+  val Ls = List
+  
   type Opt[+T] = Option[T]
   val Opt = Option
+  val So = Some
+  val No = None
   
   type Eit[+A,+B] = Either[A,B]
   val Eit = Either
+  val Le = Left
+  val Ri = Right
   
   type =>? [A,B] = PartialFunction[A,B]
+  val Partial = PartialFunction
   
   val Iterate = Iterator // Iterate continually 42 
   
   def wtf = throw new Exception("Unexpected program state reached")
-  def wth(str: => Str) = throw new Exception(s"Unexpected program state reached: str")
+  def wtf(str: => Str) = throw new Exception(s"Unexpected program state reached: $str")
+//  def wth(str: => Str) = throw new Exception(s"Unexpected program state reached: str")
   
+  def that = new {
+    def shit (msg: Str) = throw new Exception("Something " + msg)
+  }
   
-  implicit class Andable[T](val self: T) extends AnyVal {
+  implicit class Andable[T](val __self: T) extends AnyVal {
     
-    def and(f: T => Unit) = { f(self); self }
+    def and(f: T => Unit) = { f(__self); __self }
     
-    def oh_and(f: => Unit) = { f; self }
+    def oh_and(f: => Unit) = { f; __self }
     
 //    def but_before(f: => Unit) = { f; self }
     
-    def in[R] (f: T => R) = f(self)
-    def in[R] (f: (T,T) => R) = f(self,self) // eg:  42 in (_ -> _)
-    def in[R] (f: (T,T,T) => R) = f(self,self,self)
+    def in[R] (f: T => R) = f(__self)
+    def in[R] (f: (T,T) => R) = f(__self,__self) // eg:  42 in (_ -> _)
+    def in[R] (f: (T,T,T) => R) = f(__self,__self,__self)
     
+  }
+  
+  implicit class GenHelper[A](val __self: A) extends AnyVal {
+    def |> [B] (rhs: A => B): B = rhs(__self)
+//  }
+//  implicit class RightAssocApp[A, B](self: A => B) extends AnyVal {
+//  implicit class AppFun[A](val __self: A) extends AnyVal {
+//    def >>: (that: A): B = self(that)
+    /** 
+     * A helper to write left-associative applications, mainly used to get rid of paren hell
+     * Example:
+     *   println(Id(Sym(f(chars))))
+     *   println(Id |: Sym.apply |: f |: chars)  // `Sym` needs `.apply` because it's overloaded
+     */
+    def <|: [B] (lhs: A => B): B = lhs(__self)
+//    def >>: [B] (lhs: {def apply(x: A): B}): B = lhs(rhs)
+  }
+  implicit class FunHelper[A,B](val __self: A => B) extends AnyVal {
+    def <| (rhs: A): B = __self(rhs)
+    def |>: (lhs: A): B = __self(lhs)
   }
   
   def enclose[T](before: => Unit, after: => Unit)(f: => T) =

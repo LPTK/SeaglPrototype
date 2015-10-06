@@ -35,9 +35,11 @@ class Lexer extends Lexical {
         Set(str.head, str.last) map (precedenceGroups.get) map (_ getOrElse unlistedOpsPrecedence) min
       case MethodOperator(_)   => methodsPrecedence
     }
+    def name: Str
   }
   case class SymbolOperator(chars: String) extends Operator {
     require(chars.length > 0)
+    def name: Str = chars
   }
   case class MethodOperator(name: String) extends Operator {
     require(name.length > 0)
@@ -76,9 +78,9 @@ class Lexer extends Lexical {
   
   // Note: could use Def/def instead?
   sealed trait Modifier extends Token { override def toString = chars }
-  case object Value extends Modifier { val chars = "value" }
-  case object Type extends Modifier { val chars = "type" }
-  def modifier: Parser[Modifier] = strParse(Value.chars) ^^^ Value | strParse(Type.chars) ^^^ Type
+  case object ValueModif extends Modifier { val chars = "value" }
+  case object TypeModif extends Modifier { val chars = "type" }
+  def modifier: Parser[Modifier] = strParse(ValueModif.chars) ^^^ ValueModif | strParse(TypeModif.chars) ^^^ TypeModif
   
   /** Characters in operators */
   def opChar = elem("opchar", ch => !ch.isLetterOrDigit && !(keychars + ' ' + '\n' + '\r')(ch))

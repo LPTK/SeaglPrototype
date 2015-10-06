@@ -170,7 +170,7 @@ self =>
   
   def space: Parser[Int] = acceptMatch("space", {case Space(n) => n})
   
-  def modifier: Parser[Modifier] = acceptMatch("modifier", {case Value => Value  case Type => Type})
+  def modifier: Parser[Modifier] = acceptMatch("modifier", {case ValueModif => ValueModif  case TypeModif => TypeModif})
   
   def newLine: Parser[Unit] = accept(NewLine) ^^^ ()
   
@@ -386,18 +386,21 @@ self =>
 
 object AST {
 
-  sealed trait Stmt {
-    def str: Str
-    
-    override def toString = str
-  }
+//  sealed trait Stmt {
+//    def str: Str
+//    
+//    override def toString = str
+//  }
 
   case class Let(pattern: Term, value: Term, modif: Option[Parser.lexical.Modifier] = None) extends Term {//Stmt {
     def str = (modif map (_.toString + " ") getOrElse "") + s"$pattern = $value"
   }
 
   
-  sealed trait Term extends Stmt
+  sealed trait Term { //extends Stmt
+    def str: Str
+    override def toString = str
+  }
   
 //  case object Unit extends Term {
 //    def str = s"()"
@@ -430,14 +433,14 @@ object AST {
   object Lambda {
     def apply(branches: (Term, Term)*): Lambda = Lambda(branches.toList)
   }
-  case class Block(stmts: List[Stmt], ret: Term) extends Term {
+  case class Block(stmts: List[Term], ret: Term) extends Term {
     def str =
       if (stmts.nonEmpty) s"{${stmts mkString "; "}; $ret}"
       else ret.toString
   }
-  object Block { def apply(lines: List[Stmt]): Term = mkBlock(lines: _*) }
+  object Block { def apply(lines: List[Term]): Term = mkBlock(lines: _*) }
 //  object Block { val apply = mkBlock _ }
-  def mkBlock(lines: Stmt*): Term = lines match {
+  def mkBlock(lines: Term*): Term = lines match {
     case Seq(t: Term) => t
     case init :+ (t: Term) => Block(init.toList, t)
     case ls => Block(ls.toList, Unit)
