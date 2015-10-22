@@ -76,6 +76,11 @@ interpreted as (... (e0 op1 e1) op2 ...) opn en. Otherwise, if all operators are
 interpreted as e0 op1 (e1 op2 (...opn en)...).
  * 
  * 
+ * TODO: allow any nesting of modifiers blocks...
+ * treat modblocks as first class in the AST, for easier semantic checking and transformation!
+ *  -> actually required info for `rec` modif blocks!!
+ * 
+ * 
  * FIXME prevent this:
  *   a
  *    + b
@@ -170,7 +175,11 @@ self =>
   
   def space: Parser[Int] = acceptMatch("space", {case Space(n) => n})
   
-  def modifier: Parser[Modifier] = acceptMatch("modifier", {case ValueModif => ValueModif  case TypeModif => TypeModif})
+  def modifier: Parser[Modifier] = acceptMatch("modifier", {
+    case ValueModif => ValueModif
+    case TypeModif => TypeModif
+    case RecModif => RecModif
+  })
   
   def newLine: Parser[Unit] = accept(NewLine) ^^^ ()
   
@@ -306,12 +315,14 @@ self =>
   
   def binding(implicit st: State): Parser[Term ~ Term] = (spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi(true)
   
+  def modification = (modifier <~ space.?).*
+  
 //  def let(implicit st: State): Parser[Term] = "let" ! ((termWithoutSemis(false) <~ air("=")) ~ genTerm) ^^ {
   def let(implicit st: State): Parser[Term] = "let" ! (
-    (modifier <~ space.?).? ~ binding ^^ { 
-      case mo ~ (a ~ b) => Let(a, b, mo) }
-  | (modifier <~ space.? ~ newLine) ~ indented(ind => indentedLines(ind, binding(st copy (ind = ind)))) ^^ {
-      case m ~ ls => Block(ls map { case a ~ b => Let(a, b, Some(m)) }) }
+    /*(modifier <~ space.?).**/modification ~ binding ^^ { 
+      case ms ~ (a ~ b) => Let(a, b, ms) }
+  | (rep1(modifier <~ space.?) <~ newLine) ~ indented(ind => indentedLines(ind, modification ~ binding(st copy (ind = ind)))) ^^ {
+      case msblock ~ ms_ls => Block(ms_ls map { case ms ~ (a ~ b) => Let(a, b, msblock ++ ms) }) }
   )
   
   
@@ -393,8 +404,8 @@ object AST {
 //    override def toString = str
 //  }
 
-  case class Let(pattern: Term, value: Term, modif: Option[Parser.lexical.Modifier] = None) extends Term {//Stmt {
-    def str = (modif map (_.toString + " ") getOrElse "") + s"$pattern = $value"
+  case class Let(pattern: Term, value: Term, modif: List[Parser.lexical.Modifier] = Nil) extends Term {//Stmt {
+    def str = (modif map (_ + " ") mkString) + s"$pattern = $value"
   }
 
   

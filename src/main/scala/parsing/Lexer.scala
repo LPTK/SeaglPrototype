@@ -83,7 +83,12 @@ class Lexer extends Lexical {
   sealed trait Modifier extends Token { override def toString = chars }
   case object ValueModif extends Modifier { val chars = "value" }
   case object TypeModif extends Modifier { val chars = "type" }
-  def modifier: Parser[Modifier] = strParse(ValueModif.chars) ^^^ ValueModif | strParse(TypeModif.chars) ^^^ TypeModif
+  case object RecModif extends Modifier { val chars = "rec" }
+  def modifier: Parser[Modifier] = (
+    strParse(ValueModif.chars) ^^^ ValueModif
+  | strParse(TypeModif.chars) ^^^ TypeModif
+  | strParse(RecModif.chars) ^^^ RecModif
+  )
   
   /** Characters in operators */
   def opChar = elem("opchar", ch => !ch.isLetterOrDigit && !(keychars + ' ' + '\n' + '\r')(ch))

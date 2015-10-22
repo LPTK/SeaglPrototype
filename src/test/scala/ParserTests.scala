@@ -1,7 +1,7 @@
 package parsing
 
 import org.scalatest.{ FlatSpec, ShouldMatchers }
-import parsing.Parser.lexical.{ SymbolOperator, ValueModif, TypeModif }
+import parsing.Parser.lexical.{ SymbolOperator, ValueModif, TypeModif, RecModif }
 
 import utils._
 import Parser._
@@ -281,12 +281,18 @@ foo
     
     Seq("a = b", "a =\n  b") -> mkBlock(Let('a, 'b)),
     
-    Seq("value a = b", "value a =\n  b") -> mkBlock(Let('a, 'b, Some(ValueModif))),
+    Seq("value a = b", "value a =\n  b") -> mkBlock(Let('a, 'b, ValueModif :: Nil)),
     
-    Seq("type a = b", "type a =\n  b") -> mkBlock(Let('a, 'b, Some(TypeModif))),
+    Seq("type a = b", "type a =\n  b") -> mkBlock(Let('a, 'b, TypeModif :: Nil)),
   
     Seq("type a = b; type c = d", "type\n a = b\n c = d", "type\n  a = b\n  c = d") ->
-      mkBlock(Let('a, 'b, Some(TypeModif)), Let('c, 'd, Some(TypeModif))),
+      mkBlock(Let('a, 'b, TypeModif :: Nil), Let('c, 'd, TypeModif :: Nil)),
+  
+    Seq(
+      "rec value a = b\nrec value c = d",
+      "rec\n  value a = b\n  value c = d",
+      "rec value\n  a =  b\n  c = d"
+    ) -> mkBlock(Let('a, 'b, RecModif :: ValueModif :: Nil), Let('c, 'd, RecModif :: ValueModif :: Nil)),
   
     Seq("a = b => c | d => e","""
 a =
