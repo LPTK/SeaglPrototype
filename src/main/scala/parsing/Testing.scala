@@ -70,15 +70,20 @@ object ParserREPL extends App {
     
 //    val code = Iterate continually readLine takeWhile (_.nonEmpty) mkString "\n"
     val code = Iterate(readLine()) ++ (
-      Iterate continually {print(pre); System.out.flush(); readLine()}
-    ) map (str => if (str == null) throw BreakOut else str) takeWhile (_.nonEmpty) mkString "\n"
+      Iterate continually { print(pre); System.out.flush(); readLine() }
+    ) flatMap {
+      case null => throw BreakOut
+      case "" => "" :: Nil
+      case str if str.last == ';' => str.init :: "" :: Nil
+      case str => str :: Nil
+    } takeWhile (_.nonEmpty) mkString "\n"
     
 //    print("\b" * pre.length) // delete the last characters ("| ") -- doesn't seem to work on mac/idea 
-    post + (try {
+    try {
       val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code))
 //      import Parser._
 //      val pgrm = phrase(compactTerm(State(0, false)))(new lexical.Scanner(code))
-      println(pgrm)
+      println(post + pgrm)
 //      import simple._
 //      pgrm match {
 //        case Parser.Success(pgrm, _) =>
@@ -93,7 +98,7 @@ object ParserREPL extends App {
     } catch {
       case Parser.lexical.ParseException(msg) => "Parse error: " + msg
 //      case e: Throwable => throw e // unnecessary
-    })
+    }
     
     // TODO: better handling of the parsed value
   
