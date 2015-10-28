@@ -12,20 +12,32 @@ package object utils {
   type Ls[+T] = List[T]
   val Ls = List
   
+  type *[+A,+B] = (A,B)
+  
   type Opt[+T] = Option[T]
   val Opt = Option
   val So = Some
   val No = None
+  type ?[+T] = Option[T]
   
   type Eit[+A,+B] = Either[A,B]
   val Eit = Either
   val Le = Left
   val Ri = Right
+  type | [+A,+B] = Either[A,B]
   
   type =>? [A,B] = PartialFunction[A,B]
+//  type ?=> [A,B] = PartialFunction[A,B]
   val Partial = PartialFunction
   
-  val Iterate = Iterator // Iterate continually 42 
+  type -> [-A,+B] = A => B
+  type ->? [A,+B] = Map[A,B]
+  type ->* [A,B] = collection.mutable.MultiMap[A,B]
+//  type ?-> [A,+B] = Map[A,B]
+//  type ?->* [A,B] = collection.mutable.MultiMap[A,B]
+  
+  val Iterate = Iterator // eg, Iterate continually 42 
+  
   
   def wtf = throw new Exception("Unexpected program state reached")
   def wtf(str: => Str) = throw new Exception(s"Unexpected program state reached: $str")
