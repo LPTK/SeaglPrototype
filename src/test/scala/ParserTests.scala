@@ -10,6 +10,8 @@ import AST._
 /**
  * TODO test for empty lines
  * 
+ * TODO (a => b => c) == (a => (b => c))
+ * 
  */
 class ParserTests extends FlatSpec with ShouldMatchers {
   

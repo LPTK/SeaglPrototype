@@ -11,19 +11,8 @@ trait Terms {
   //---
   // REQUIRED DEFINITIONS
   //---
-    
-////  type Type = types.ComTerm
-////  type Value = values.ComTerm
-//  type Type
-//  type Value
-//  
-//  type TypeStmt
-//  type ValueStmt
-//  
-////  type TypeSymbol = types.Symbol
-////  type ValueSymbol = values.Symbol
-//  //  val TypeSymbol = types.Symbol
-//  //  val ValueSymbol = values.Symbol
+  
+  // Moved to Stage2
   
   
   
@@ -52,9 +41,10 @@ trait Terms {
     type TermId
     type Kind
     
-    sealed trait Ident
-    case class Stable(path: Ls[Integer], name: Sym) extends Ident // eg: `Seagl :: Lang :: Int`
-    class Local(val name: Opt[Sym] = None) extends Ident
+//    sealed trait Ident
+//    case class Stable(path: Ls[Integer], name: Sym) extends Ident // eg: `Seagl :: Lang :: Int`
+//    class Local(val name: Sym) extends Ident
+//    class Synthetic(val nameHint: Opt[Sym] = None) extends Ident
     
     
     //sealed trait Stmt extends Tree
@@ -89,9 +79,6 @@ trait Terms {
     case class CharLit(value: Char) extends Literal[Char]
     case class StrLit(value: Str) extends Literal[Str]
     case class IntLit(value: BigInt) extends Literal[BigInt]
-//    case class RatLit(numerator: BigInt, denominator: BigInt) extends Literal[TermsTemplate# RatLit] { //Literal[(BigInt,BigInt)] {
-//      def value = this //(numerator, denominator)
-//    }
     case class RatLit(value: Rational) extends Literal[Rational]
     
     case class Id(ident: Ident) extends ComTerm
@@ -102,9 +89,9 @@ trait Terms {
     
     case class App(fun: Node, arg: Node) extends LetTerm
     
-    case class Let(modifs: Ls[Modifier], pattern: Node, body: LetNode, where: Ls[Stmt]) extends ComStmt
+    case class Let(modifs: Ls[Modifier], pattern: Node, body: LetNode, where: Ls[Stmt] = Ls()) extends ComStmt
     
-    //    case class Dual(t: dualWorld.Term) extends Term
+    // case class Dual(t: dualWorld.Term) extends Term
     case class DepApp(fun: Node, darg: dualWorld.Node) extends LetTerm
     
     case class Block(stmts: Seq[Stmt], ret: Node) extends ComTerm
