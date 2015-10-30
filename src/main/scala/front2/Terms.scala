@@ -22,7 +22,8 @@ trait Terms {
   
   
   type Stmt = TypeStmt | ValueStmt
-  
+  implicit def t2stmt(a: TypeStmt): Stmt = Left(a)
+  implicit def v2stmt(a: ValueStmt): Stmt = Right(a)
   
   
   sealed trait Tree
@@ -36,10 +37,14 @@ trait Terms {
     type DualWorld <: TermsTemplate
     val dualWorld: DualWorld
     
-    type Node
-    type LetNode // In ANF, some nodes can only be let-nodes, and not sub-expressions
+    //type Node
+    type Term
+    //type LetNode // In ANF, some nodes can only be let-nodes, and not sub-expressions
+    //type LetTerm // In ANF, some nodes can only be let-nodes, and not sub-expressions
     type TermId
     type Kind
+    
+    type TNode = Node[Term]
     
 //    sealed trait Ident
 //    case class Stable(path: Ls[Integer], name: Sym) extends Ident // eg: `Seagl :: Lang :: Int`
@@ -52,10 +57,15 @@ trait Terms {
     //type ComStmt = ASTStmt with CoreStmt
     
     
-    //sealed trait Term extends GeneralTerm
-    sealed trait LetTerm extends ASTTerm with CoreTerm with GeneralTerm
-    //type ComTerm = ASTTerm with CoreTerm with GeneralTerm
-    sealed trait ComTerm extends LetTerm
+//    //sealed trait Term extends GeneralTerm
+//    sealed trait LetTerm extends ASTTerm with CoreTerm with GeneralTerm
+//    //type ComTerm = ASTTerm with CoreTerm with GeneralTerm
+//    sealed trait ComTerm extends LetTerm
+//    //sealed trait ComTerm extends ASTTerm with CoreTerm with GeneralTerm
+    /** Terms valid as the body of a `Let` */
+    sealed trait LetTerm
+    /** Terms valid as any subexpression */
+    sealed trait ComTerm extends LetTerm with ASTTerm with CoreTerm with GeneralTerm
     
     //---
     // COMMON TERMS/STATEMENTS
@@ -83,33 +93,33 @@ trait Terms {
     
     case class Id(ident: Ident) extends ComTerm
     
-    case class Atom(name: Sym, args: Ls[Node]) extends ComTerm
+    case class Atom(name: Sym, args: Ls[TNode]) extends ComTerm
     
-    case class Tuple(first: Node, second: Node) extends ComTerm // first class or not..?
+    case class Tuple(first: TNode, second: TNode) extends ComTerm // first class or not..?
     
-    case class App(fun: Node, arg: Node) extends LetTerm
+    case class App(fun: TNode, arg: TNode) extends LetTerm
     
-    case class Let(modifs: Ls[Modifier], pattern: Node, body: LetNode, where: Ls[Stmt] = Ls()) extends ComStmt
+    case class Let(modif: Modif, pattern: TNode, body: Node[LetTerm], where: Ls[Stmt] = Ls()) extends ComStmt
     
     // case class Dual(t: dualWorld.Term) extends Term
-    case class DepApp(fun: Node, darg: dualWorld.Node) extends LetTerm
+    case class DepApp(fun: TNode, darg: Node[dualWorld.Term]) extends LetTerm
     
-    case class Block(stmts: Seq[Stmt], ret: Node) extends ComTerm
+    case class Block(stmts: Seq[Stmt], ret: TNode) extends ComTerm
     
-    case class Ascribe(v: Node, k: Kind) extends ComTerm
+    case class Ascribe(v: TNode, k: Kind) extends ComTerm
     
     
     //---
     // AST TERMS/STATEMENTS
     //---
     
-    sealed trait ASTTerm extends GeneralTerm
+    sealed trait ASTTerm extends LetTerm //extends GeneralTerm
     sealed trait ASTStmt
     //object AST {
       
-    case class Lambda(pattern: Node, body: Node) extends ASTTerm
+    case class Lambda(pattern: TNode, body: TNode) extends ASTTerm
     
-    case class OpApp(arg: Node, op: Operator) extends ASTTerm
+    case class OpApp(arg: TNode, op: Operator) extends ASTTerm
     
     case class ModBlock(modifs: Ls[Modifier], stmts: Seq[Stmt]) extends ASTStmt
       
@@ -120,11 +130,11 @@ trait Terms {
     // CORE TERMS/STATEMENTS
     //---
     
-    sealed trait CoreTerm extends GeneralTerm
+    sealed trait CoreTerm extends LetTerm //GeneralTerm
     sealed trait CoreStmt
     //object Core {
       
-    case class Closure(param: Ident, body: Node) extends CoreTerm
+    case class Closure(param: Ident, body: TNode) extends CoreTerm
     
     case class RecBlock(stmts: Ls[Stmt]) extends CoreStmt
       
@@ -148,6 +158,8 @@ trait Terms {
     
     //type Stmt = TypeStmt
     
+    type Term = Type
+    //type LetTerm = 
     
     /** TYPE-ONLY TERMS */
     
@@ -161,12 +173,15 @@ trait Terms {
     val dualWorld = types
 
     type Node = ValueNode
-    type LetNode = LetValueNode
+    //type LetNode = LetValueNode
     type Kind = Type
     //    type Sym = ValSym
     type TermId = VId
     
     //type Stmt = ValueStmt
+    
+    type Term = Value
+    //type LetTerm = ValueLet
     
     
     /** VALUE-ONLY TERMS */

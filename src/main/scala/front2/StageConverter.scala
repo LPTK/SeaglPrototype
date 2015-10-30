@@ -29,9 +29,10 @@ abstract case class StageConverter[A <: Stage2, B <: Stage2](a: A, b: B) {
   def vnod(x: a.ValueNode)(implicit c: Ctx): Result[b.ValueNode]
   def tnod(x: a.TypeNode)(implicit c: Ctx): Result[b.TypeNode]
   
+  def processNode[T](x: a.Node[T])(implicit c: Ctx): Result[b.Node[T]] //= x match { }
   
   def processComTerm(tta: a.TermsTemplate, ttb: TermsTemplate)
-                 (x: tta.ComTerm, nods: tta.Node => Result[ttb.Node])
+                 (x: tta.ComTerm)//, nods: tta.Node => Result[ttb.Node])
                  (implicit c: Ctx): Result[ttb.ComTerm] =
   { import tta._
     x match {
