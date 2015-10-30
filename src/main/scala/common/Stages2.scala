@@ -14,23 +14,29 @@ trait Stage2 extends Terms {
   type TypeStmt
   type ValueStmt
 
-//  type TypeNode
-//  type ValueNode
-//  type LetValueNode
-  type TypeNode = Node[Type]
-  type ValueNode = Node[Value]
+////  type TypeNode
+////  type ValueNode
+////  type LetValueNode
+//  type TypeNode = Node[Type]
+//  type ValueNode = Node[Value]
   
-  type Node[+T]
+//  type Node[+T]
+//  def typval[T](n: Node[T]): Node[Type] | Node[Value]
   
-  def typval[T](n: Node[T]): Node[Type] | Node[Value]
+  type Metadata
+  //case class Node[+T](term: T, md: Metadata)
+//  case class TypeNode(term: Type, md: Metadata)
+//  case class ValueNode(term: Value, md: Metadata)
   
+  type TypeSubNode <: types.Node
+  type ValueSubNode <: values.Node
   
   type Modif
   
   //type UniqueSymbol
   
-  implicit def typTerm(x: TypeNode): Type
-  implicit def valTerm(x: ValueNode): Value
+//  implicit def typTerm(x: TypeNode): Type
+//  implicit def valTerm(x: ValueNode): Value
   
 }
 
@@ -41,13 +47,15 @@ object Stages2 {
 
   object AST extends Stage2 with PretypedStage {//with Scopes {
     
-    type Type = types.ASTTerm with types.LetTerm
-    type Value = values.ASTTerm with values.LetTerm
+    type Type = types.ASTTerm with types.GenTerm
+    type Value = values.ASTTerm with values.GenTerm
     
     type TypeStmt = types.ASTStmt
     type ValueStmt = values.ASTStmt
     
     //type LetValueNode = ValueNode
+    type TypeSubNode = types.Node
+    type ValueSubNode = values.Node
     
     type Modif = Ls[Modifier]
     
@@ -67,7 +75,8 @@ object Stages2 {
   // In ANF, ValueNode stores any node but App (stored in TopLevelValueNode)
   object ANF extends Stage2 with PretypedStage {
     
-    type Type = types.CoreTerm
+    //type Type = types.CoreTerm
+    type Type = types.GenTerm
     type Value = values.CoreTerm
     
     type TypeStmt = types.CoreStmt
@@ -75,6 +84,8 @@ object Stages2 {
     
     //type LetValueNode = values.LetTerm
     
+    type TypeSubNode = types.Node
+    class ValueSubNode(override val term: values.CoreTerm, md: Metadata) extends values.Node(term, md)
     
 //    type ValueLet = values.App | values.DepApp
 //    implicit def app2lett(a: values.App): ValueLet = Left(a)
@@ -115,20 +126,20 @@ object Stages2 {
     //case class Node[+T <: GeneralTerm](term: T, org: Origin)
     //case class Node[+T](term: T, org: Origin)
     
-    case class Node[+T](term: T, org: Origin)
-    def typval[T](n: Node[T]) = n match {
-      case Node(_: Type, _) => Left(n.asInstanceOf[Node[Type]])
-      case Node(_: Value, _) => Right(n.asInstanceOf[Node[Value]])
-    }
+//    case class Node[+T](term: T, org: Origin)
+//    def typval[T](n: Node[T]) = n match {
+//      case Node(_: Type, _) => Left(n.asInstanceOf[Node[Type]])
+//      case Node(_: Value, _) => Right(n.asInstanceOf[Node[Value]])
+//    }
     
-    def typTerm(x: TypeNode): Type = x.term
-    def valTerm(x: ValueNode): Value = x.term
+//    def typTerm(x: TypeNode): Type = x.term
+//    def valTerm(x: ValueNode): Value = x.term
+    
+    
+    type Metadata = Origin
     
     
   }
   
-  trait Originated {
-    def org: Origin
-  }
   
 }

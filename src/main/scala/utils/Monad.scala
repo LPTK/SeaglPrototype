@@ -41,6 +41,25 @@ object Monad {
     def map[A,B](ma: F[A], f: A => B): F[B] = ma map f
   }
   
+//  //def sequence[M[_]: Monad, A](ls: Seq[M[A]]): M[Seq[A]] = {
+//  def sequence[M[_], A](ls: Seq[M[A]])(implicit m: Monad[M]): M[Seq[A]] = {
+//    //val m = implicitly[M[_]]
+//    import m._
+//    ls match {
+//      //case h +: t => m.flatMap(h, h => m.flatMap(sequence(t), s => h +: s))
+//      case h +: t => for (h <- h; t <- sequence(t)) yield h +: t
+//      //case h :: t => m.flatMap(sequence(t), s => h :: s)
+//      case Seq.empty => lift(Seq.empty)
+//    }
+//  }
+  def sequence[M[_], A](ls: Ls[M[A]])(implicit m: Monad[M]): M[Ls[A]] = {
+    import m._
+    ls match {
+      case h :: t => for (h <- h; t <- sequence(t)) yield h :: t
+      case Nil => lift(Nil)
+    }
+  } 
+  
 }
 
 trait Functor[FP[_]] {
