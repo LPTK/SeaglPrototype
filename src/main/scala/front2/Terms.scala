@@ -69,7 +69,7 @@ trait Terms {
 //    sealed trait ComTerm extends LetTerm
 //    //sealed trait ComTerm extends ASTTerm with CoreTerm with GeneralTerm
     /** Terms valid as the body of a `Let` */
-    sealed trait GenTerm
+    sealed trait GenTerm extends CoreTerm
     /** Terms valid as subexpressions */
     sealed trait SubTerm extends GenTerm with ASTTerm with CoreTerm with GeneralTerm
     
@@ -108,12 +108,12 @@ trait Terms {
     // case class Dual(t: dualWorld.Term) extends Term
     case class DepApp(fun: TNode, darg: dualWorld.SubNode) extends GenTerm
     
-    case class Block(stmts: Ls[Stmt], ret: Node) extends SubTerm
+    case class Block(stmts: Ls[Stmt], ret: Node) extends GenTerm
     
     case class Ascribe(v: TNode, k: Kind) extends SubTerm
     
     
-    case class Let(modif: Modif, pattern: TNode, body: Node, where: Ls[Stmt] = Ls()) extends ComStmt
+    case class Let(modif: Modif, pattern: Node, body: Node, where: Ls[Stmt] = Ls()) extends ComStmt
     
     
     //---
@@ -128,7 +128,9 @@ trait Terms {
     
     case class OpApp(arg: TNode, op: Operator) extends ASTTerm
     
-    case class ModBlock(modifs: Modif, stmts: Ls[Stmt]) extends ASTStmt
+    case class ModBlock(modifs: Modif, stmts: Ls[Stmt]) extends ASTStmt {
+      require(stmts.size > 0)
+    }
       
     //}
     
@@ -137,11 +139,11 @@ trait Terms {
     // CORE TERMS/STATEMENTS
     //---
     
-    sealed trait CoreTerm extends GenTerm //GeneralTerm
+    sealed trait CoreTerm //extends GenTerm //GeneralTerm
     sealed trait CoreStmt
     //object Core {
       
-    case class Closure(param: Ident, body: Node) extends CoreTerm
+    case class Closure(param: Ident, body: Node) extends CoreTerm with SubTerm
     
     case class RecBlock(stmts: Ls[Stmt]) extends CoreStmt
       
@@ -205,5 +207,14 @@ trait Terms {
   }
   
   case class Impure(n: values.Node) extends values.ComStmt
+  
+  // ModBlock
+  object ModBlock {
+    //def unapply(mb: types.ModBlock) = Some(mb.modifs, mb.stmts)
+    def unapply(x: TermsTemplate# ASTStmt) = x match {
+      case types.ModBlock(modifs, stmts) => Some(modifs, stmts)
+      case values.ModBlock(modifs, stmts) => Some(modifs, stmts)
+    }
+  }
   
 }

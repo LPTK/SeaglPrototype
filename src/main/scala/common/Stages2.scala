@@ -85,7 +85,8 @@ object Stages2 {
     //type LetValueNode = values.LetTerm
     
     type TypeSubNode = types.Node
-    class ValueSubNode(override val term: values.CoreTerm, md: Metadata) extends values.Node(term, md)
+    //class ValueSubNode(override val term: values.CoreTerm, md: Metadata) extends values.Node(term, md)
+    class ValueSubNode(override val term: values.SubTerm, md: Metadata) extends values.Node(term, md)
     
 //    type ValueLet = values.App | values.DepApp
 //    implicit def app2lett(a: values.App): ValueLet = Left(a)

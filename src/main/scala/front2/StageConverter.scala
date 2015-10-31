@@ -69,15 +69,19 @@ conv =>
     def snod(x: ta.SubNode): Result[tb.SubNode]
     def kin(x: ta.Kind): Result[tb.Kind]
     
-    def process(x: ta.GenTerm): Result[tb.GenTerm] = x match {
+    def process(x: ta.SubTerm): Result[tb.SubTerm] = x match {
       // ComTerm
       case ta.Literal(v) => tb.Literal(v) |> lift
       case ta.Id(id) => tb.Id(id) |> lift
       case ta.Atom(na,ar) => Monad.sequence(ar map snod) map { tb.Atom(na, _) }
+      case ta.Ascribe(v, k) => for (v <- snod(v); k <- kin(k)) yield tb.Ascribe(v, k)
+    }
+    def process(x: ta.GenTerm): Result[tb.GenTerm] = x match {
       case ta.App(fu,ar) => for(fu <- snod(fu); ar <- snod(ar)) yield tb.App(fu,ar)
       case ta.DepApp(fu,ar) => for(fu <- snod(fu); ar <- co.snod(ar)) yield tb.DepApp(fu,ar)
       case ta.Block(sts, re) => for (sts <- Monad.sequence(sts map conv.process); re <- nod(re)) yield tb.Block(sts, re)
-      case ta.Ascribe(v, k) => for (v <- snod(v); k <- kin(k)) yield tb.Ascribe(v, k)
+      // SubTerm
+      case x: ta.SubTerm => process(x)
       // AstTerm
       case x: ta.ASTTerm => process(x)
       // CoreTerm
@@ -93,12 +97,12 @@ conv =>
     }
     
     def process(x: ta.ComStmt): Result[tb.ComStmt] = x match {
-      case ta.Let(mo,pa,bo,wh) => for(
-        mo <- mod(mo);
-        pa <- snod(pa);
-        bo <- nod(bo);
+      case ta.Let(mo,pa,bo,wh) => for {
+        mo <- mod(mo)
+        pa <- nod(pa)
+        bo <- nod(bo)
         wh <- Monad.sequence(wh map conv.process)
-      ) yield tb.Let(mo,pa,bo,wh)
+      } yield tb.Let(mo,pa,bo,wh)
       //case a.values.Impure(n) => println(n); ??? //nod(n)
 //      case a.Impure(n) => println(n); ??? //nod(n)
       //case im: ta.Impure => println(im); ??? //nod(n)
