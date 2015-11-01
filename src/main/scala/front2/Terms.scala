@@ -28,10 +28,10 @@ trait Terms {
     
     trait Stmt extends ASTStmt with CoreStmt
     
-    /** Terms valid as the body of a `Let` */
+    /** Terms valid as the body of a `Let` (any term) */
     sealed trait GenTerm extends CoreTerm
     
-    /** Terms valid as subexpressions */
+    /** Terms valid as subexpressions (in ANF) */
     sealed trait SubTerm extends GenTerm with ASTTerm with CoreTerm
     
     //---

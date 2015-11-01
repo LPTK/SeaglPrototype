@@ -15,7 +15,7 @@ toanf =>
    * Stores the transformed object (in `res`) as well as the new statements that the transformation has generated (in `genStmts`)
    * Note: could be done with a State monad?
    */
-  case class Result[T](genStmts: Ls[b.AnyStmt], res: T)
+  case class Result[+T](genStmts: Ls[b.AnyStmt], res: T)
   implicit object Result extends Monad[Result] {
     def lift[A](a: A) = Result(Nil, a)
     def flatMap[A,B](ma: M[A], f: A => M[B]): M[B] = {

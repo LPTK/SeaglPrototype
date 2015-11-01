@@ -29,8 +29,8 @@ object Stages2 {
 
   object AST extends Stage2 with PretypedStage {
     
-    type Type = types.ASTTerm with types.GenTerm
-    type Value = values.ASTTerm with values.GenTerm
+    type Type = types.ASTTerm
+    type Value = values.ASTTerm
     
     type TypeStmt = types.ASTStmt
     type ValueStmt = values.ASTStmt

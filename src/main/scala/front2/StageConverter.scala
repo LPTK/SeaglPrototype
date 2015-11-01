@@ -5,14 +5,6 @@ import common._
 import scala.util.{ Try, Success, Failure }
 import collection._
 
-abstract class Converter {
-  
-  type Ctx
-  type Result[T]
-  implicit val Result: Monad[Result]
-  
-}
-
 abstract case class StageConverter[A <: Stage2, B <: Stage2](a: A, b: B) extends Converter {
 conv =>
   import Result._
@@ -38,11 +30,15 @@ conv =>
   abstract case class TermsConverter[TA <: a.TermsTemplate, TB <: b.TermsTemplate](ta: TA, tb: TB) {
     import Result._
     
+    
+    /** Dual Terms Converter */
+    
     val co: TermsConverter[ta.dualWorld.type, tb.dualWorld.type]
     
     
     /** Polymorphic definitions */
   
+    /** Node could be implemented here, but then we'd have to provide a function for Metadata */
     def nod(x: ta.Node): Result[tb.Node]
     def snod(x: ta.SubNode): Result[tb.SubNode]
     def kin(x: ta.Kind): Result[tb.Kind]
@@ -58,8 +54,8 @@ conv =>
       case x: ta.SubTerm => process(x)
       // AstTerm
       case x: ta.ASTTerm => process(x)
-      // CoreTerm
-      case x: ta.CoreTerm => process(x)
+//      // CoreTerm
+//      case x: ta.CoreTerm => process(x)
     }
     def process(x: ta.SubTerm): Result[tb.SubTerm] = x match {
       case ta.Literal(v) => tb.Literal(v) |> lift
@@ -67,7 +63,7 @@ conv =>
       case ta.Atom(na,ar) => Monad.sequence(ar map snod) map { tb.Atom(na, _) }
       case ta.Ascribe(v, k) => for (v <- snod(v); k <- kin(k)) yield tb.Ascribe(v, k)
     }
-    def processA(x: ta.ASTTerm): Result[tb.ASTTerm] = x match {
+    def process(x: ta.ASTTerm): Result[tb.ASTTerm] = x match {
       case ta.Lambda(pa, bo) => for(pa <- nod(pa); bo <- nod(bo)) yield tb.Lambda(pa,bo)
       case ta.OpApp(ar, op) => snod(ar) map {tb.OpApp(_, op)}
     }
@@ -105,20 +101,7 @@ conv =>
 }
 
 
-abstract class StageTransformer[A <: Stage2](a: A) extends StageConverter[A,A](a,a) {
-  
-  type Result[T] = T
-  val Result = Monad.TrivialMonad
-  
-}
-
-
-abstract class StageTraverser[A <: Stage2](a: A) extends StageConverter[A,A](a,a) {
-  
-  type Result[T] = Unit
-  val Result = Monad.UnitMonad
-  
-}
+abstract class SameStageConverter[A <: Stage2](a: A) extends StageConverter[A,A](a,a)
 
 
 
