@@ -62,7 +62,11 @@ toanf =>
         val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
         val let = tb.Let(Modification(false), nod(pa).res, idn)
         tb.Closure(id, mkBlock(let)(nod(bo).res))
-      case ta.OpApp(ar, op) => tb.App(tb.Node(tb.Id(op.id), x.md/*TODO better md*/), nod(ar).res)
+//      case ta.OpAppL(ar, op) => tb.App(tb.Node(tb.Id(op.id), x.md/*TODO better md*/), nod(ar).res)
+//      case ta.OpAppR(op, ar) => tb.App(tb.Node(tb.Id(op.id), x.md/*TODO better md*/), nod(ar).res) // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
+//      case ta.OpTerm(op) => tb.Id(op.id)
+      case st: ta.SubTerm => process(st).res
+      case gt: ta.GenTerm => process(gt).res
     }, x.md) |> lift
     
     def snod(x: ta.SubNode): Result[tb.SubNode] = tb.Node(process(x.term).res, x.md) |> lift

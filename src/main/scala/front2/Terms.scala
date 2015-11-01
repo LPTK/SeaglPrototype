@@ -87,7 +87,11 @@ trait Terms {
       
     case class Lambda(pattern: Node, body: Node) extends ASTTerm
     
-    case class OpApp(arg: SubNode, op: Operator) extends ASTTerm
+    case class OpAppL(arg: SubNode, op: Operator) extends ASTTerm
+    
+    case class OpAppR(op: Operator, arg: SubNode) extends ASTTerm
+    
+    case class OpTerm(op: Operator) extends ASTTerm
     
     case class ModBlock(modifs: Modif, stmts: Ls[AnyStmt]) extends ASTStmt {
       require(stmts.size > 0)

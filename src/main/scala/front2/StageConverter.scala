@@ -65,7 +65,9 @@ conv =>
     }
     def process(x: ta.ASTTerm): Result[tb.ASTTerm] = x match {
       case ta.Lambda(pa, bo) => for(pa <- nod(pa); bo <- nod(bo)) yield tb.Lambda(pa,bo)
-      case ta.OpApp(ar, op) => snod(ar) map {tb.OpApp(_, op)}
+      case ta.OpAppL(ar, op) => snod(ar) map {tb.OpAppL(_, op)}
+      case ta.OpAppR(op, ar) => snod(ar) map {tb.OpAppR(op, _)}
+      case ta.OpTerm(op) => tb.OpTerm(op) |> lift
     }
     def process(x: ta.CoreTerm): Result[tb.CoreTerm] = x match {
       case ta.Closure(pa, bo) => //for (pa <- process(pa); bo <- process(pa))
