@@ -55,13 +55,14 @@ toanf =>
     def kin(x: ta.Kind): Result[tb.Kind] = x |> lift
     
     /** For types, we know nodes will never generate additional statements (types.App is not moved out of subexpressions) */
-    def nod(x: ta.Node): Result[tb.Node] = tb.Node(x.term match {
+    def nod(x: ta.Node): Result[tb.Node] = b.TypeNode(x.term match {
       case ta.Lambda(id: Ident, bo) => tb.Closure(id, nod(bo).res)
       case ta.Lambda(pa, bo) =>
         val id = new SyntheticId(nameHint(pa.term))
-        val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
+        val idn = b.TypeNode(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
         val let = tb.Let(Modification(false), nod(pa).res, idn)
-        tb.Closure(id, mkBlock(let)(nod(bo).res))
+        val bo2 = nod(bo).res
+        tb.Closure(id, mkBlock(let)(bo2))//{b.TypeNode(_, bo2.md)})
 //      case ta.OpAppL(ar, op) => tb.App(tb.Node(tb.Id(op.id), x.md/*TODO better md*/), nod(ar).res)
 //      case ta.OpAppR(op, ar) => tb.App(tb.Node(tb.Id(op.id), x.md/*TODO better md*/), nod(ar).res) // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
 //      case ta.OpTerm(op) => tb.Id(op.id)
@@ -69,7 +70,12 @@ toanf =>
       case gt: ta.GenTerm => process(gt).res
     }, x.md) |> lift
     
-    def snod(x: ta.SubNode): Result[tb.SubNode] = tb.Node(process(x.term).res, x.md) |> lift
+    def snod(x: ta.SubNode): Result[tb.SubNode] = b.TypeNode(process(x.term).res, x.md) |> lift
+    
+    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = b.TypeNode(ret.term match {
+      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) |> blockAsTerm
+      case _ => tb.Block(stmts toList, ret) |> blockAsTerm
+    }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
     
   }
   val vconv = new AnfTermsConverter(AST.values, ANF.values) {
@@ -79,7 +85,7 @@ toanf =>
     
     def kin(x: ta.Kind): Result[tb.Kind] = tconv.process(x)
     
-    def nod(x: ta.Node): Result[tb.Node] = process(x.term) map {tb.Node(_, x.md)}
+    def nod(x: ta.Node): Result[tb.Node] = process(x.term) map {b.ValueNode(_, x.md)}
     
     /** For values, a simple node may generate several new statements */
     def snod(x: ta.SubNode): Result[tb.SubNode] = {
@@ -87,7 +93,7 @@ toanf =>
         case ta.Lambda(id: Ident, bo) => nod(bo) map {tb.Closure(id, _)}
         case ta.Lambda(pa, bo) =>
           val id = new SyntheticId(nameHint(pa.term))
-          val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
+          val idn = b.ValueNode(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
           for {
             pa <- nod(pa)
             let = tb.Let(Modification(false), pa, idn)
@@ -97,13 +103,19 @@ toanf =>
         case gt: ta.GenTerm => process(gt) flatMap { gt =>
           val id = new SyntheticId(nameHint(x.term))
           val idt = tb.Id(id)//: tb.SubTerm
-          val idn = tb.Node(idt, Synthetic(phaseName, x.md))
-          val let = tb.Let(Modification(false), idn, tb.Node(gt, x.md))
+          val idn = b.ValueNode(idt, Synthetic(phaseName, x.md))
+          val let = tb.Let(Modification(false), idn, b.ValueNode(gt, x.md))
           Result(let :: Nil, idt)
         }
       }
       Result(sts, new b.ValueSubNode(ret, x.md))
     }
+    
+    /** TODO: that's almost the same as in tconv :( ... would be nice to refactor */
+    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = b.ValueNode(ret.term match {
+      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) |> blockAsTerm
+      case _ => tb.Block(stmts toList, ret) |> blockAsTerm
+    }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
     
   }
   
@@ -114,10 +126,10 @@ toanf =>
     
     def nameHint(x: ta.Term): ?[Sym] = None
     
-    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = tb.Node(ret.term match {
-      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) |> blockAsTerm
-      case _ => tb.Block(stmts toList, ret) |> blockAsTerm
-    }, ret.md) // TODO: Stmt should have a node, not be a Value!.. // MixedOrg((stmts map (_ org)) :+ ret.org))
+//    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node)(node: tb.Block => tb.Node) = node(ret.term match {
+//      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) |> blockAsTerm
+//      case _ => tb.Block(stmts toList, ret) |> blockAsTerm
+//    }) //, ret.md // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
     
   }
   

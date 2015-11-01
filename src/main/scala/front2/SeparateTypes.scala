@@ -17,7 +17,7 @@ object SeparateTypes extends SameStageConverter[AST.type](AST) with Transformer 
     
     val co: TermsConverter[ta.dualWorld.type, tb.dualWorld.type] = vconv
     
-    def nod(x: ta.Node): Result[tb.Node] = tb.Node(process(x.term), x.md)
+    def nod(x: ta.Node): Result[tb.Node] = b.TypeNode(process(x.term)).setPos(x.pos)
     def snod(x: ta.SubNode): Result[tb.SubNode] = nod(x)
     def kin(x: ta.Kind): Result[tb.Kind] = x
     
@@ -26,7 +26,7 @@ object SeparateTypes extends SameStageConverter[AST.type](AST) with Transformer 
     
     val co: TermsConverter[ta.dualWorld.type, tb.dualWorld.type] = tconv
     
-    def nod(x: ta.Node): Result[tb.Node] = tb.Node(process(x.term), x.md)
+    def nod(x: ta.Node): Result[tb.Node] = b.ValueNode(process(x.term)).setPos(x.pos)
     def snod(x: ta.SubNode): Result[tb.SubNode] = nod(x)
     def kin(x: ta.Kind): Result[tb.Kind] = x // TODO
     

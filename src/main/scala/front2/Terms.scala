@@ -23,8 +23,8 @@ trait Terms {
     type Kind
     type Metadata
     
-    case class Node(term: Term, md: Metadata)
-    type SubNode <: Node
+    type Node //case class Node(term: Term, md: Metadata)
+    type SubNode //<: Node
     
     trait Stmt extends ASTStmt with CoreStmt
     
@@ -128,9 +128,10 @@ trait Terms {
     
     type Term = Type
     
-    type SubNode = TypeSubNode
+    type Node = TypeNode
+    type SubNode = Node //TypeSubNode
     
-    type Metadata = TypeMetadata
+    //type Metadata = TypeMetadata
     
     /** TYPE-ONLY TERMS */
     
@@ -147,9 +148,10 @@ trait Terms {
     
     type Term = Value
     
+    type Node = ValueNode
     type SubNode = ValueSubNode
     
-    type Metadata = ValueMetadata
+    //type Metadata = ValueMetadata
     
     
     /** VALUE-ONLY TERMS */

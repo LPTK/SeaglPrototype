@@ -3,6 +3,8 @@ package common
 import utils._
 import front2._
 
+import scala.util.parsing.input.Positional
+
 trait Stage2 extends Terms {
   
   type Type
@@ -11,13 +13,16 @@ trait Stage2 extends Terms {
   type TypeStmt
   type ValueStmt
   
-  /** Info stored with each Node */
-  type TypeMetadata
-  type ValueMetadata
+//  /** Info stored with each Node */
+//  type TypeMetadata
+//  type ValueMetadata
+  
+  type TypeNode
+  type ValueNode
   
   /** Subnodes may refine TermsTemplate#Node with stricter bounds or additional info */
-  type TypeSubNode <: types.Node
-  type ValueSubNode <: values.Node
+  //type TypeSubNode// <: types.Node
+  type ValueSubNode// <: values.Node
   
   type Modif
   
@@ -35,7 +40,10 @@ object Stages2 {
     type TypeStmt = types.ASTStmt
     type ValueStmt = values.ASTStmt
     
-    type TypeSubNode = types.Node
+    class Pos extends Positional { def md = SourceCode(pos) }
+    case class TypeNode(term: Type) extends Pos
+    case class ValueNode(term: Value) extends Pos
+    //type TypeSubNode = types.Node
     type ValueSubNode = values.Node
     
     type Modif = Ls[Modifier]
@@ -44,12 +52,17 @@ object Stages2 {
   
   object ANF extends Stage2 with PretypedStage with ANFStage {
     
+    case class TypeNode(term: Type, md: Origin)
+    case class ValueNode(term: Value, md: Origin)
+    
+    class ValueSubNode(override val term: values.SubTerm, md: Origin) extends ValueNode(term, md)
+    
   }
   
   object Typed extends Stage2 with ANFStage {
     
-    case class TypeMetadata(typ: Type, org: Origin)
-    case class ValueMetadata(kin: Types.TypeKind, org: Origin)
+//    case class TypeMetadata(typ: Type, org: Origin)
+//    case class ValueMetadata(kin: Types.TypeKind, org: Origin)
     
   }
   
@@ -57,8 +70,8 @@ object Stages2 {
   // Common Stage-related definitions:
 
   trait PretypedStage {
-    type TypeMetadata = Origin
-    type ValueMetadata = Origin
+//    type TypeMetadata = Origin
+//    type ValueMetadata = Origin
   }
   
   /**
@@ -73,8 +86,9 @@ object Stages2 {
     type TypeStmt = types.CoreStmt
     type ValueStmt = values.CoreStmt
     
-    type TypeSubNode = types.Node
-    class ValueSubNode(override val term: values.SubTerm, md: ValueMetadata) extends values.Node(term, md)
+    //type TypeSubNode = types.Node
+    //class ValueSubNode(override val term: values.SubTerm, md: ValueMetadata) extends values.Node(term, md)
+    //class ValueSubNode(override val term: values.SubTerm, md: ValueMetadata) extends ValueNode(term, md)
     
     type Modif = Modification
     
