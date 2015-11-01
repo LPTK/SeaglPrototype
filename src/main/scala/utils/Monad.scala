@@ -25,9 +25,9 @@ object Monad {
     def map[A,B](ma: Discard[A], f: A => B): Discard[B] = ()
   }
   
-  type Simple[+T] = T
+  type Trivial[+T] = T
   
-  implicit val Simple = new Monad[Simple] {
+  implicit val TrivialMonad = new Monad[Trivial] {
     def lift[A](a: A): M[A] = a
     def flatMap[A,B](ma: M[A], f: A => M[B]): M[B] = f(ma)
     
