@@ -21,6 +21,7 @@ trait Terms {
     
     type Term
     type Kind
+    type Metadata
     
     case class Node(term: Term, md: Metadata)
     type SubNode <: Node
@@ -125,6 +126,7 @@ trait Terms {
     
     type SubNode = TypeSubNode
     
+    type Metadata = TypeMetadata
     
     /** TYPE-ONLY TERMS */
     
@@ -142,6 +144,8 @@ trait Terms {
     type Term = Value
     
     type SubNode = ValueSubNode
+    
+    type Metadata = ValueMetadata
     
     
     /** VALUE-ONLY TERMS */

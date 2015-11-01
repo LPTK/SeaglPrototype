@@ -12,7 +12,8 @@ trait Stage2 extends Terms {
   type ValueStmt
   
   /** Info stored with each Node */
-  type Metadata
+  type TypeMetadata
+  type ValueMetadata
   
   /** Subnodes may refine TermsTemplate#Node with stricter bounds or additional info */
   type TypeSubNode <: types.Node
@@ -47,13 +48,17 @@ object Stages2 {
   
   object Typed extends Stage2 with ANFStage {
     
+    case class TypeMetadata(typ: Type, org: Origin)
+    case class ValueMetadata(kin: Types.TypeKind, org: Origin)
+    
   }
   
 
   // Common Stage-related definitions:
 
   trait PretypedStage {
-    type Metadata = Origin
+    type TypeMetadata = Origin
+    type ValueMetadata = Origin
   }
   
   /**
@@ -69,7 +74,7 @@ object Stages2 {
     type ValueStmt = values.CoreStmt
     
     type TypeSubNode = types.Node
-    class ValueSubNode(override val term: values.SubTerm, md: Metadata) extends values.Node(term, md)
+    class ValueSubNode(override val term: values.SubTerm, md: ValueMetadata) extends values.Node(term, md)
     
     type Modif = Modification
     
