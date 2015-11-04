@@ -80,14 +80,21 @@ class Lexer extends Lexical {
   def strParse(str: Str): Parser[Unit] = str.tail.foldLeft(accept(str charAt 0) ^^^ ()){case(acc,c) => acc ~ c ^^^ ()}
   
   // Note: could use Def/def instead?
-  sealed trait Modifier extends Token { override def toString = chars }
-  case object ValueModif extends Modifier { val chars = "value" }
-  case object TypeModif extends Modifier { val chars = "type" }
-  case object RecModif extends Modifier { val chars = "rec" }
-  def modifier: Parser[Modifier] = (
-    strParse(ValueModif.chars) ^^^ ValueModif
-  | strParse(TypeModif.chars) ^^^ TypeModif
-  | strParse(RecModif.chars) ^^^ RecModif
+//  sealed trait Modifier extends Token { override def toString = chars }
+//  case object ValueModif extends Modifier { val chars = "value" }
+//  case object TypeModif extends Modifier { val chars = "type" }
+//  case object RecModif extends Modifier { val chars = "rec" }
+//  def modifier: Parser[Modifier] = (
+//    strParse(ValueModif.chars) ^^^ ValueModif
+//  | strParse(TypeModif.chars) ^^^ TypeModif
+//  | strParse(RecModif.chars) ^^^ RecModif
+//  )
+  import front2.{Modifier, Value, Type, Priv, Rec}
+  case class Modif(m: Modifier) extends Token { def chars = toString }
+  def modifier: Parser[Modif] = (
+    strParse("value") ^^^ Modif(Value)
+  | strParse("type") ^^^ Modif(Type)
+  | strParse("rec") ^^^ Modif(Rec)
   )
   
   /** Characters in operators */

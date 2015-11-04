@@ -1,11 +1,12 @@
 package parsing
 
 import org.scalatest.{ FlatSpec, ShouldMatchers }
-import parsing.Parser.lexical.{ SymbolOperator, ValueModif, TypeModif, RecModif }
+import parsing.Parser.lexical.{ SymbolOperator }
+import front2.{Modifier, Value, Type, Priv, Rec}
 
 import utils._
 import Parser._
-import AST._
+import ASTProxy._
 
 /**
  * TODO test for empty lines
@@ -16,7 +17,7 @@ import AST._
 class ParserTests extends FlatSpec with ShouldMatchers {
   
   implicit def sym2str(s: Sym): Str = s match { case Sym(str) => str }
-  implicit def sym2id(s: Sym): Id = s match { case Sym(str) => Id(str) }
+  implicit def sym2id(s: Sym): Term = s match { case Sym(str) => Id(str) }
   
 //  val plus = Parser.lexical.SymbolOperator("+")
 //  val minus = Parser.lexical.SymbolOperator("-")
@@ -42,7 +43,7 @@ class ParserTests extends FlatSpec with ShouldMatchers {
   
   "parsing litterals" should "work" in {
     tests(
-      "()" -> Unit,
+      "()" -> Literal(()),
       "42" -> Literal(42),
       "\"ok\"" -> Literal("ok")
     )
@@ -201,13 +202,13 @@ a
 
   "parsing lambdas" should "work" in tests(
     
-    Seq("a => b", "a =>\n  b") -> Lambda('a.id -> 'b.id :: Nil),
+    Seq("a => b", "a =>\n  b") -> Lambda('a.id -> 'b.id),
   
-    Seq("a => b | c => d" /*, "| a => b | c => d"*/) -> Lambda('a.id -> 'b.id :: 'c.id -> 'd.id :: Nil),
+    Seq("a => b | c => d" /*, "| a => b | c => d"*/) -> Lambda('a.id -> 'b.id, 'c.id -> 'd.id),
     
-    Seq("a(b => c)", "a\n  b => c") -> App('a, Lambda('b.id -> 'c.id :: Nil)),
+    Seq("a(b => c)", "a\n  b => c") -> App('a, Lambda('b.id -> 'c.id)),
   
-    Seq("a(b => c | e => f)") -> App('a, Lambda('b.id -> 'c.id :: 'e.id -> 'f.id :: Nil)),
+    Seq("a(b => c | e => f)") -> App('a, Lambda('b.id -> 'c.id, 'e.id -> 'f.id)),
   
     Seq(
       "a b => c d",
@@ -215,7 +216,7 @@ a
       "a b =>\n  c d",
       "(a\n  b) => c d",
       "a  b => c\n  d"
-    ) -> Lambda(App('a, 'b) -> App('c, 'd) :: Nil),
+    ) -> Lambda(App('a, 'b) -> App('c, 'd)),
   
     Seq(
       "a =>\n  b\n  c"
@@ -224,7 +225,7 @@ a
   )
   
   "parsing multiline lambdas" should "work" in {
-    val lsmap = App(OpAppL('ls, map), Lambda('a.id -> 'b.id :: 'c.id -> 'd.id :: Nil))
+    val lsmap = App(OpAppL('ls, map), Lambda('a.id -> 'b.id, 'c.id -> 'd.id))
     
     tests(
 
@@ -272,7 +273,7 @@ foo
   | a => b
   | c => d
 | None => Nil
-""") -> App('foo, Lambda(App('Some,'ls) -> lsmap :: 'None.id -> 'Nil.id :: Nil))
+""") -> App('foo, Lambda(App('Some,'ls) -> lsmap, 'None.id -> 'Nil.id))
     
 )
   }
@@ -283,18 +284,18 @@ foo
     
     Seq("a = b", "a =\n  b") -> mkBlock(Let('a, 'b)),
     
-    Seq("value a = b", "value a =\n  b") -> mkBlock(Let('a, 'b, ValueModif :: Nil)),
+    Seq("value a = b", "value a =\n  b") -> mkBlock(Let('a, 'b, Value :: Nil)),
     
-    Seq("type a = b", "type a =\n  b") -> mkBlock(Let('a, 'b, TypeModif :: Nil)),
+    Seq("type a = b", "type a =\n  b") -> mkBlock(Let('a, 'b, Type :: Nil)),
   
     Seq("type a = b; type c = d", "type\n a = b\n c = d", "type\n  a = b\n  c = d") ->
-      mkBlock(Let('a, 'b, TypeModif :: Nil), Let('c, 'd, TypeModif :: Nil)),
+      mkBlock(Let('a, 'b, Type :: Nil), Let('c, 'd, Type :: Nil)),
   
     Seq(
       "rec value a = b\nrec value c = d",
       "rec\n  value a = b\n  value c = d",
       "rec value\n  a =  b\n  c = d"
-    ) -> mkBlock(Let('a, 'b, RecModif :: ValueModif :: Nil), Let('c, 'd, RecModif :: ValueModif :: Nil)),
+    ) -> mkBlock(Let('a, 'b, Rec :: Value :: Nil), Let('c, 'd, Rec :: Value :: Nil)),
   
     Seq("a = b => c | d => e","""
 a =

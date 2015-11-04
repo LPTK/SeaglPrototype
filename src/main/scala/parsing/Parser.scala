@@ -1,5 +1,7 @@
 package parsing
 
+import front2.Modifier
+
 import scala.language.{postfixOps, implicitConversions}
 import scala.util.parsing.combinator.syntactical._
 
@@ -156,13 +158,13 @@ object Parser extends TokenParsers {
 self =>
   type Tokens = Lexer
   val lexical = new Lexer
-
+  
   import lexical._
-  import AST._
-
+  import ASTProxy._
+  
   implicit def keyword(chars: String): Parser[String] =
     accept(Keyword(chars)) ^^ (_.chars)
-
+  
   def symbol: Parser[String] = elem("identifier", _.isInstanceOf[Symbol]) ^^ (_.chars)
   def atom: Parser[String] = elem("atom", _.isInstanceOf[lexical.Atom]) ^^ (_.chars)
   
@@ -177,9 +179,9 @@ self =>
   def space: Parser[Int] = acceptMatch("space", {case Space(n) => n})
   
   def modifier: Parser[Modifier] = acceptMatch("modifier", {
-    case ValueModif => ValueModif
-    case TypeModif => TypeModif
-    case RecModif => RecModif
+    case Modif(front2.Value) => front2.Value
+    case Modif(front2.Type) => front2.Type
+    case Modif(front2.Rec) => front2.Rec
   })
   
   def newLine: Parser[Unit] = accept(NewLine) ^^^ ()
@@ -260,7 +262,7 @@ self =>
   | atom ^^ Id
   | acceptMatch("string litteral", {case StrLit(str) => Literal(str)})
   | acceptMatch("int litteral", {case IntLit(n) => Literal(n)})
-  | "(" ~ ")" ^^^ Unit
+  | "(" ~ ")" ^^^ Literal(())
   | ("(" ~> air(genTerm(State(st.ind, false))) <~ ")") // TODOnot ( + newline ... <- actually it's nice NOT to support it
   | ("(" ~> air(operator) ~ genTerm(State(0, false)).? <~ space.? <~ ")") ^^ {
       case op ~ None => OpTerm(op)
@@ -396,7 +398,50 @@ self =>
 
 
 
+object ASTProxy {
+  import Stages2.AST
+  import Stages2.AST._
+  import AST._
+  import values._
+  import Parser.lexical._
+  
+  type Term = ValueNode//values.Term
+  type Lambda = ValueNode//values.Term
+  val N = ValueNode
+  
+  implicit def Op(op: Operator): front2.Operator = op match {
+    case SymbolOperator(chars) => front2.SymbolOperator(chars)
+    case MethodOperator(chars) => front2.MethodOperator(chars)
+  }
+  
+  object Lambda {
+//    def apply(pa: Term, bo: Term) = values.Lambda(pa, bo)
+    def apply(pa_bo: (Term, Term)*) = LambdaCompo(pa_bo map values.Lambda.tupled toList) |> N
+  }
+  object Block {
+    def apply(stmts: Ls[Term], ret: Term): Term = values.Block(stmts map {s => v2stmt(AST.Impure(s))}, ret) |> N
+    def apply(lines: Ls[Term]): Term = mkBlock(lines: _*)
+  }
+  def mkBlock(lines: Term*): Term = lines match {
+    case Seq(t: Term) => t
+    case init :+ (t: Term) => Block(init.toList, t)
+    case _ => wtf("Wrong Block ction")
+  }
+  def App(f: Term, a: Term): Term = values.App(f, a) |> N
+  def OpAppL(a: Term, op: Operator): Term = values.OpAppL(a, op) |> N
+  def OpAppR(op: Operator, a: Term): Term = values.OpAppR(op, a) |> N
+  def OpTerm(op: Operator): Term = values.OpTerm(op: Operator) |> N
+  def Id(s: String): Term = values.Id(LocalId(s |> Sym.apply)) |> N
+  
+  //def Let(pattern: Term, value: Term, modif: List[Modifier] = Nil): values.Stmt = values.Let(modif, pattern, value, Nil)
+  def Let(pattern: Term, value: Term, modif: List[Modifier] = Nil): Term = values.Let(modif, pattern, value, Nil) |> N
+  
+  def Literal(x: Any): Term = values.Literal(x) |> N
+  
+  
+}
 
+/*
 object AST {
 
 //  sealed trait Stmt {
@@ -463,7 +508,7 @@ object AST {
   }
 
 }
-
+*/
 
 
 /*
