@@ -1,5 +1,5 @@
 
-enablePlugins(ScalaJSPlugin)
+//enablePlugins(ScalaJSPlugin)
 
 scalaVersion := "2.11.7"
 
