@@ -15,6 +15,12 @@ libraryDependencies += "org.scalatest" % "scalatest_2.11" % "2.2.4" % "test"
 libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test"
 
 
+scalacOptions += "-feature"
+
+scalacOptions += "-language:postfixOps"
+
+scalacOptions += "-language:postfixOps"
+
 
 // Wanted nice Unicode (extended ASCII) characters when doing `sbt run`, but this messes up the REPL feedback beyond:
 

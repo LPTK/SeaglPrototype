@@ -1,5 +1,7 @@
 package common
 
+import scala.language.higherKinds
+
 import utils.Monad
 
 trait Converter {
