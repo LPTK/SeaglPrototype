@@ -53,7 +53,7 @@ conv =>
       // SubTerm
       case x: ta.SubTerm => process(x)
       // AstTerm
-      case x: ta.ASTTerm => process(x)
+//      case x: ta.ASTTerm => process(x)
 //      // CoreTerm
 //      case x: ta.CoreTerm => process(x)
     }
@@ -68,10 +68,13 @@ conv =>
       case ta.OpAppL(ar, op) => snod(ar) map {tb.OpAppL(_, op)}
       case ta.OpAppR(op, ar) => snod(ar) map {tb.OpAppR(op, _)}
       case ta.OpTerm(op) => tb.OpTerm(op) |> lift
+      case let: ta.Let => ??? //process(let: ta.Stmt)
+      case x: ta.GenTerm => process(x)
     }
     def process(x: ta.CoreTerm): Result[tb.CoreTerm] = x match {
       case ta.Closure(pa, bo) => //for (pa <- process(pa); bo <- process(pa))
         nod(bo) map (tb.Closure(pa, _))
+      case x: ta.GenTerm => process(x)
     }
     
     def process(x: ta.Stmt): Result[tb.Stmt] = x match {

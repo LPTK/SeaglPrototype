@@ -5,6 +5,13 @@ import front2._
 
 import scala.util.parsing.input.Positional
 
+/**
+  * TODO: better org allowing more flexible, polymorphic use
+  * Terms should define forms (AST, ANF) in parallel to phases/stages!
+  *   they define the Term trait(!), nodes, and if necessary subnodes and subterms
+  * Stage simply instantiates types/values (instead of Terms.. which is inappropriate) and their Metadata
+  * 
+  */
 trait Stage2 extends Terms {
   
   type Type
@@ -55,7 +62,7 @@ object Stages2 {
     case class TypeNode(term: Type, md: Origin)
     case class ValueNode(term: Value, md: Origin)
     
-    class ValueSubNode(override val term: values.SubTerm, md: Origin) extends ValueNode(term, md)
+    class ValueSubNode(override val term: values.CoreTerm with values.SubTerm, md: Origin) extends ValueNode(term, md)
     
   }
   
@@ -80,7 +87,7 @@ object Stages2 {
   trait ANFStage {
   self: Stage2 =>
     
-    type Type = types.GenTerm
+    type Type = types.CoreTerm //types.GenTerm
     type Value = values.CoreTerm
     
     type TypeStmt = types.CoreStmt

@@ -6,6 +6,8 @@ import utils._
 
 sealed trait Modifier
   
+// TODO: put in object:
+
 case object Type extends Modifier
 
 case object Value extends Modifier

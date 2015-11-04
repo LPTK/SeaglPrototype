@@ -23,22 +23,32 @@ trait Terms {
     type Kind
     type Metadata
     
+    /**
+     * If patterns are not to be put in ANF, Node[+T] would be more appropriate 
+     */
     type Node //case class Node(term: Term, md: Metadata)
     type SubNode //<: Node
+//    type NodeType = { val term: Term; val md: Metadata }
+//    type Node <: NodeType //case class Node(term: Term, md: Metadata)
+//    type SubNode <: NodeType //<: Node
+//    val Node: (Term, Metadata) => Node
+//    val SubNode: (SubTerm, Metadata) => SubNode
+//    // Would also need a NodeTrait with terma and md...
     
     trait Stmt extends ASTStmt with CoreStmt
     
-    /** Terms valid as the body of a `Let` (any term) */
-    sealed trait GenTerm extends CoreTerm
+    ///** Terms valid as the body of a `Let` (any term) */
+    /** Terms that are BOTH AST and Core */
+    sealed trait GenTerm extends ASTTerm with CoreTerm // TODO rename to ComTerm
     
     /** Terms valid as subexpressions (in ANF) */
-    sealed trait SubTerm extends GenTerm with ASTTerm with CoreTerm
+    sealed trait SubTerm //extends GenTerm //with ASTTerm with CoreTerm
     
     //---
     // COMMON TERMS/STATEMENTS
     //---
     
-    sealed trait Literal[T] extends SubTerm {
+    sealed trait Literal[T] extends SubTerm with GenTerm {
       def value: T
     }
     object Literal {
@@ -58,9 +68,9 @@ trait Terms {
     case class IntLit(value: BigInt) extends Literal[BigInt]
     case class RatLit(value: Rational) extends Literal[Rational]
     
-    case class Id(ident: Ident) extends SubTerm
+    case class Id(ident: Ident) extends SubTerm with GenTerm
     
-    case class Atom(name: Sym, args: Ls[SubNode]) extends SubTerm
+    case class Atom(name: Sym, args: Ls[SubNode]) extends SubTerm with GenTerm
     
     //case class Tuple(first: TNode, second: TNode) extends SubTerm // first class or not..?
     
@@ -71,21 +81,22 @@ trait Terms {
     
     case class Block(stmts: Ls[AnyStmt], ret: Node) extends GenTerm
     
-    case class Ascribe(v: SubNode, k: Kind) extends SubTerm
+    case class Ascribe(v: SubNode, k: Kind) extends SubTerm with GenTerm
     
     
-    case class Let(modif: Modif, pattern: Node, body: Node, where: Ls[AnyStmt] = Ls()) extends Stmt
+    case class Let(modif: Modif, pattern: Node, body: Node, where: Ls[AnyStmt] = Ls()) extends Stmt with ASTTerm
     
     
     //---
     // AST TERMS/STATEMENTS
     //---
     
-    sealed trait ASTTerm extends GenTerm
+    sealed trait ASTTerm extends SubTerm //extends GenTerm
     sealed trait ASTStmt
     //object AST {
       
     case class Lambda(pattern: Node, body: Node) extends ASTTerm
+    case class LambdaCompo(lambdas: Ls[Lambda]) extends ASTTerm
     
     case class OpAppL(arg: SubNode, op: Operator) extends ASTTerm
     
