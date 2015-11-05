@@ -22,6 +22,9 @@ trait Terms extends PrettyPrint {
   trait TermsTemplate { //extends PrettyPrint {
   terms =>
     
+    /** For some reason, does not always work (Scala does not see it and the warning remains) */
+    trait ExplicitOuter { val outer = terms }
+    
     val printer = Printer(this)
     import printer.PrettyPrinted
     
@@ -54,12 +57,12 @@ trait Terms extends PrettyPrint {
     
     ///** Terms valid as the body of a `Let` (any term) */
     /** Terms that are BOTH AST and Core */
-    sealed trait ComTerm extends ASTTerm with CoreTerm
+    sealed trait ComTerm extends ASTTerm with CoreTerm with ExplicitOuter
     
     /** Terms valid as subexpressions (in ANF) */
     sealed trait SubTerm //extends GenTerm //with ASTTerm with CoreTerm
     
-    sealed trait ComStmt extends ASTStmt with CoreStmt
+    sealed trait ComStmt extends ASTStmt with CoreStmt { override val outer = terms }
     
     //---
     // COMMON TERMS/STATEMENTS
@@ -109,7 +112,7 @@ trait Terms extends PrettyPrint {
     //---
     
     sealed trait ASTTerm extends PrettyPrinted //extends SubTerm //extends GenTerm
-    sealed trait ASTStmt extends PrettyPrinted
+    sealed trait ASTStmt extends PrettyPrinted { val outer = terms }
     //object AST {
       
     case class Lambda(pattern: Node, body: Node) extends ASTTerm
@@ -133,7 +136,7 @@ trait Terms extends PrettyPrint {
     //---
     
     sealed trait CoreTerm extends PrettyPrinted
-    sealed trait CoreStmt extends PrettyPrinted
+    sealed trait CoreStmt extends PrettyPrinted { val outer = terms }
     //object Core {
       
     case class Closure(param: Ident, body: Node) extends CoreTerm with SubTerm
@@ -164,7 +167,7 @@ trait Terms extends PrettyPrint {
     type Stmt = CoreStmt
     //type Modif = Modification
     
-    case class Node(term: Term, md: Origin) extends printer.PrettyPrinted
+    case class Node(term: Term, md: Origin) extends printer.PrettyPrinted with SelfProductPrintable
     
   }
   
@@ -229,6 +232,7 @@ trait Terms extends PrettyPrint {
     def unapply(x: TermsTemplate# ASTStmt) = x match {
       case types.ModBlock(modifs, stmts) => Some(modifs, stmts)
       case values.ModBlock(modifs, stmts) => Some(modifs, stmts)
+      case _ => None
     }
   }
   

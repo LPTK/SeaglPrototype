@@ -3,7 +3,7 @@ package common
 import scala.util.parsing.input.Position
 import utils._
 
-trait Origin {
+trait Origin extends Metadata.Entry {
   
   def + (that: Origin) = MixedOrg(this, that)
   

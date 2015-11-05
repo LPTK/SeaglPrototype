@@ -55,62 +55,78 @@ conv =>
     /** Default Transformations */
   
     def process(x: ta.ComTerm): Result[tb.ComTerm] = x match {
-      case ta.App(fu,ar) => for(fu <- snod(fu); ar <- snod(ar)) yield tb.App(fu,ar)
-      case ta.DepApp(fu,ar) => for(fu <- snod(fu); ar <- co.snod(ar)) yield tb.DepApp(fu,ar)
-      case ta.Block(sts, re) => for (sts <- Monad.sequence(sts map conv.process); re <- nod(re)) yield tb.Block(sts, re)
       // SubTerm
       case ta.Literal(v) => tb.Literal(v) |> lift
       case ta.Id(id) => tb.Id(id) |> lift
       case ta.Atom(na,ar) => Monad.sequence(ar map snod) map { tb.Atom(na, _) }
       case ta.Ascribe(v, k) => for (v <- snod(v); k <- kin(k)) yield tb.Ascribe(v, k)
+      // Other terms
+      case ta.App(fu,ar) => for(fu <- snod(fu); ar <- snod(ar)) yield tb.App(fu,ar)
+      case ta.DepApp(fu,ar) => for(fu <- snod(fu); ar <- co.snod(ar)) yield tb.DepApp(fu,ar)
+      case ta.Block(sts, re) => for (sts <- Monad.sequence(sts map conv.process); re <- nod(re)) yield tb.Block(sts, re)
       // SubTerm
       //case x: ta.SubTerm => process(x)
       // AstTerm
 //      case x: ta.ASTTerm => process(x)
 //      // CoreTerm
 //      case x: ta.CoreTerm => process(x)
+      case _ => scalasDumb
     }
     def process(x: ta.SubTerm): Result[tb.SubTerm] = x match {
-      case x: ta.ASTTerm => process(x)
+      //case x: ta.ASTTerm => process(x) // Note: for some reason, putting this case (which cannot happen) makes scalac think the rest is dead code!!
       case x: ta.ComTerm => process(x)
+      case _ => scalasDumb
     }
     def process(x: ta.ASTTerm): Result[tb.ASTTerm] = x match {
       case ta.Lambda(pa, bo) => for(pa <- nod(pa); bo <- nod(bo)) yield tb.Lambda(pa,bo)
       case ta.OpAppL(ar, op) => snod(ar) map {tb.OpAppL(_, op)}
       case ta.OpAppR(op, ar) => snod(ar) map {tb.OpAppR(op, _)}
       case ta.OpTerm(op) => tb.OpTerm(op) |> lift
-      case let: ta.Let => ??? //process(let: ta.Stmt)
+      case let: ta.Let => process(let)
       case x: ta.ComTerm => process(x)
+      case _ => scalasDumb
     }
     def process(x: ta.CoreTerm): Result[tb.CoreTerm] = x match {
       case ta.Closure(pa, bo) => //for (pa <- process(pa); bo <- process(pa))
         nod(bo) map (tb.Closure(pa, _))
       case x: ta.ComTerm => process(x)
+      case _ => scalasDumb
     }
     
-    def process(x: ta.ComStmt): Result[tb.ComStmt] = x match {
+    def process(x: ta.Let): Result[tb.Let] = x match {
       case ta.Let(mo,pa,bo,wh) => for {
         mo <- mod(mo)
         pa <- nod(pa)
         bo <- nod(bo)
         wh <- Monad.sequence(wh map conv.process)
       } yield tb.Let(mo,pa,bo,wh)
-      // TODO case Impure(n) => nod(n) map (Impure(_))
     }
     
+    def process(x: ta.ComStmt): Result[tb.ComStmt] = x match {
+      case x: ta.Let => process(x)
+      case Impure(n) => nod(n) map (Impure(_))
+    }
     def process(x: ta.ASTStmt): Result[tb.ASTStmt] = x match {
       case ta.ModBlock(mo, sts) => for(mo <- mod(mo); sts <- Monad.sequence(sts map conv.process)) yield tb.ModBlock(mo, sts)
+      case x: ta.ComStmt => process(x)
+      case _ => scalasDumb
     }
     def process(x: ta.CoreStmt): Result[tb.CoreStmt] = x match {
       case ta.RecBlock(sts) => for(sts <- Monad.sequence(sts map conv.process)) yield tb.RecBlock(sts)
+      case x: ta.ComStmt => process(x)
+      case _ => scalasDumb
     }
   
     /**
      * Scala fails to understand that {{{a.Impure <: a.values.ComStmt}}}, so we provide ctor/xtor to handle that case
      */
     object Impure {
-      def apply(n: tb.Node) = b.Impure(n.asInstanceOf[b.values.Node]).asInstanceOf[tb.Stmt]
-      def unapply(im: A# Impure) = Some(im.n.asInstanceOf[ta.Node])
+      def apply(n: tb.Node) = b.Impure(n.asInstanceOf[b.values.Node]).asInstanceOf[tb.ComStmt]
+      //def unapply(im: A# Impure) = Some(im.n.asInstanceOf[ta.Node])
+      def unapply(im: a.TermsTemplate# ComStmt) = im match { //Some(im.n.asInstanceOf[ta.Node])
+        case a.Impure(n) => n.asInstanceOf[ta.Node] |> Some.apply
+        case _ => None
+      }
     }
     
   }

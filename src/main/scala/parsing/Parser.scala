@@ -184,7 +184,7 @@ self =>
     case Modif(front2.Rec) => front2.Rec
   })
   
-  def newLine: Parser[Unit] = accept(NewLine) ^^^ ()
+  def newLine: Parser[Unit] = accept(NewLine) ^^^ (())
   
   def operator: Parser[Operator] = acceptMatch("operator", {
     case op: Operator => op
@@ -199,7 +199,7 @@ self =>
 //    case op: SymbolOperator if op.precedence == lvl => op
 //  }, op => s"Wrong precedence for $op") else operator ^? { case op if op.precedence == lvl => op }
   
-  def emptyLines: Parser[Unit] = rep(space.? ~ newLine) ^^^ ()
+  def emptyLines: Parser[Unit] = rep(space.? ~ newLine) ^^^ (())
   
   def pgrm = phrase(block(0) <~ emptyLines)
 
