@@ -67,22 +67,22 @@ toanf =>
     //def snod(x: ta.SubNode): Result[tb.SubNode] = b.TypeNode(ast2Core(x.term).res, x.md) |> lift
     def snod(x: ta.SubNode): Result[tb.SubNode] = nod(x)
     
-    def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm] = //???
-      (x match {
-        case ta.Lambda(id: Ident, bo) => tb.Closure(id, nod(bo).res)
-        case ta.Lambda(pa, bo) =>
-          val id = new SyntheticId(nameHint(pa.term))
-          val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
-          val let = tb.Let(Modification(false), nod(pa).res, idn)
-          val bo2 = nod(bo).res
-          tb.Closure(id, mkBlock(let)(bo2)) // TODO the right thing (closure aggregates stmts) //{b.TypeNode(_, bo2.md)})
-  //      case ta.OpAppL(ar, op) => tb.App(tb.Node(tb.Id(op.id), x.md/*TODO better md*/), nod(ar).res)
-  //      case ta.OpAppR(op, ar) => tb.App(tb.Node(tb.Id(op.id), x.md/*TODO better md*/), nod(ar).res) // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
-  //      case ta.OpTerm(op) => tb.Id(op.id)
-//        case st: ta.SubTerm => process(st).res
-//        case gt: ta.GenTerm => process(gt).res
-        case _ => ??? // TODO
-      }) |> lift
+//    def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm] = //???
+//      (x match {
+//        case ta.Lambda(id: Ident, bo) => tb.Closure(id, nod(bo).res)
+//        case ta.Lambda(pa, bo) =>
+//          val id = new SyntheticId(nameHint(pa.term))
+//          val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
+//          val let = tb.Let(Modification(false), nod(pa).res, idn)
+//          val bo2 = nod(bo).res
+//          tb.Closure(id, mkBlock(let)(bo2)) // TODO the right thing (closure aggregates stmts) //{b.TypeNode(_, bo2.md)})
+//  //      case ta.OpAppL(ar, op) => tb.App(tb.Node(tb.Id(op.id), x.md/*TODO better md*/), nod(ar).res)
+//  //      case ta.OpAppR(op, ar) => tb.App(tb.Node(tb.Id(op.id), x.md/*TODO better md*/), nod(ar).res) // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
+//  //      case ta.OpTerm(op) => tb.Id(op.id)
+////        case st: ta.SubTerm => process(st).res
+////        case gt: ta.GenTerm => process(gt).res
+//        case _ => ??? // TODO
+//      }) |> lift
     
 //    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = tb.Node(ret.term match {
 //      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) |> blockAsTerm
@@ -116,26 +116,6 @@ toanf =>
       Result(sts ++ s, new tb.SubNode(t, x.md))
     }
     
-    def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm] = x match {
-      case x: ta.ComTerm => process(x)
-      case ta.Lambda(id: Ident, bo) => //nod(bo) map {tb.Closure(id, _)}
-        //val Result(sts, ret) = nod(bo)
-        (nod(bo) match {
-          case Result(Nil, r) => tb.Closure(id, r)
-          case Result(sts, r) => tb.Closure(id, mkBlock(sts: _*)(r))
-        }) |> lift
-      case ta.Lambda(pa, bo) =>
-        // FIXME: what to do with the statements introduced by the pattern??
-        val id = new SyntheticId(nameHint(pa.term))
-        val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
-        for {
-          pa <- nod(pa)
-          let = tb.Let(Modification(false), pa, idn): b.AnyStmt
-          //bo <- nod(bo)
-          Result(sts, bo2) = nod(bo)
-        } yield tb.Closure(id, mkBlock(let :: sts : _*)(bo2))
-      case _ => ??? // TODO OpApp, Let, etc.
-    }
 //    
 //    /** TODO: that's almost the same as in tconv :( ... would be nice to refactor */
 //    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = tb.Node(ret.term match {
@@ -147,17 +127,17 @@ toanf =>
   
   
   //abstract class AnfTermsConverter[TA <: a.TermsTemplate, TB <: b.TermsTemplate { type Term = TB# CoreTerm }](val _ta: TA, val _tb: TB)
-  abstract class AnfTermsConverter[TA <: a.TermsTemplate, TB <: b.Core](val _ta: TA, val _tb: TB)
+  abstract class AnfTermsConverter[TA <: a.AST, TB <: b.Core](val _ta: TA, val _tb: TB)
   extends TermsConverter[TA,TB](_ta,_tb) {
     
     //def blockAsTerm: tb.Block => tb.Term
     
     def nameHint(x: ta.Term): ?[Sym] = None
     
-    def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm]
+    //def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm]
     
     /** `types.stmt` and `values.stmt` are never supposed to be called -- `toanf.process` will deal with statements directly */
-    def stmt(x: ta.Stmt) = wtf 
+    def stmt(x: ta.Stmt): Result[tb.Stmt] = wtf 
 //    x match {
 //      case x: ta.ComStmt => process(x)
 //      case x: ta.ASTStmt => ???
@@ -182,6 +162,31 @@ toanf =>
       case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) //|> blockAsTerm
       case _ => tb.Block(stmts toList, ret) //|> blockAsTerm
     }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
+   
+    def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm] = x match {
+      case x: ta.ComTerm => process(x)
+      case x: ta.Let =>
+        //process(x: ta.ComStmt) flatMap {s => Result(tb.stmt2anyS(s) :: Nil, tb.Literal(()))}
+        // eqtly
+        val Result(sts, res) = process(x: ta.ComStmt); Result(sts :+ tb.stmt2anyS(res), tb.Literal(()))
+      case ta.Lambda(id: Ident, bo) => //nod(bo) map {tb.Closure(id, _)}
+        //val Result(sts, ret) = nod(bo)
+        (nod(bo) match {
+          case Result(Nil, r) => tb.Closure(id, r)
+          case Result(sts, r) => tb.Closure(id, mkBlock(sts: _*)(r))
+        }) |> lift
+      case ta.Lambda(pa, bo) =>
+        // FIXME: what to do with the statements introduced by the pattern??
+        val id = new SyntheticId(nameHint(pa.term))
+        val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
+        for {
+          pa <- nod(pa)
+          let = tb.Let(Modification(false), pa, idn) |> tb.stmt2anyS //: b.AnyStmt
+          //bo <- nod(bo)
+          Result(sts, bo2) = nod(bo)
+        } yield tb.Closure(id, mkBlock(let :: sts : _*)(bo2))
+      case _ => ??? // TODO OpApp, Let, etc.
+    }
     
   }
   

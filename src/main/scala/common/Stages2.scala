@@ -39,7 +39,7 @@ object Stages2 {
   
   // Main compilation stages:
 
-  object AST extends Stage2 with PretypedStage {
+  object AST extends Stage2 with PretypedStage with Common {
     
 //    type Type = types.ASTTerm
 //    type Value = values.ASTTerm
@@ -55,17 +55,24 @@ object Stages2 {
 //    
     type Modif = Ls[Modifier]
     
-    object valuez extends TermsTemplate with AST {
-      type DualWorld = types.type
-      val dualWorld = types
-      
-      type Kind = Type
-    }
-    object typez extends TermsTemplate with AST {
+    object typez extends TermsTemplate with AST with ComTypes {
       type DualWorld = values.type
       lazy val dualWorld = values
       
       type Kind = Types.TypeKind
+      
+      //def stmt2anyS(a: Stmt) = Left(a)
+      //def stmt2anyS = Left.apply
+    }
+//    object valuez extends TermsTemplate with AST with ComValues {
+//      type DualWorld = types.type
+//      val dualWorld = types
+    object valuez extends DualTemplate[types.type](types) with AST with ComValues {
+      
+      type Kind = Type
+      
+      //def stmt2anyS(a: Stmt) = Right(a)
+      //def stmt2anyS = Right.apply
     }
     val values = valuez
     val types = typez
@@ -99,7 +106,7 @@ object Stages2 {
   /**
    * In ANF, App, OpApp and Block cannot be SubNodes, and have to be assigned to a temporary local variable instead.
    */
-  trait ANFStage {
+  trait ANFStage extends Common {
   self: Stage2 =>
     
 //    type Type = types.CoreTerm //types.GenTerm
@@ -114,20 +121,29 @@ object Stages2 {
 //    
     type Modif = Modification
     
-    object types extends TermsTemplate with Core {
+    /** Note: cannot use Template[values.type](values) here because of cyclic dependency */
+    object types extends TermsTemplate with Core with ComTypes {
       type DualWorld = values.type
       lazy val dualWorld = values
+    //object types extends Template[values.type](values) with Core with ComTypes {
       
       type Kind = Types.TypeKind
       
       type SubNode = Node
+      
+      //def stmt2anyS(a: Stmt) = Left(a)
+      //def stmt2anyS = Left.apply
     } 
     
-    object values extends TermsTemplate with ANF {
-      type DualWorld = types.type
-      val dualWorld = types
+//    object values extends TermsTemplate with ANF with ComValues {
+//      type DualWorld = types.type
+//      val dualWorld = types
+    object values extends DualTemplate[types.type](types) with ANF with ComValues {
       
       type Kind = Type
+      
+      //def stmt2anyS(a: Stmt) = Right(a)
+      //def stmt2anyS = Right.apply
     }
     
   }
@@ -135,10 +151,26 @@ object Stages2 {
   trait Common { // TODO use
   self: Stage2 =>
     
-    class Template[DW <: TermsTemplate](dw: DW) extends TermsTemplate {
+    abstract class DualTemplate[DW <: TermsTemplate](dw: DW) extends TermsTemplate {
       type DualWorld = DW
       lazy val dualWorld = dw
+      
+      //def stmt2anyS(a: Stmt) = stmt(a)
     }
+    
+    trait ComTypes { self: TermsTemplate =>
+      def stmt2anyS = Left(_: Stmt)
+    }
+    trait ComValues { self: TermsTemplate =>
+      def stmt2anyS = Right(_: Stmt)
+    }
+    
+//    // doesn't work: dualWorld has incompatible type
+//    trait ComValues2 { self: TermsTemplate =>
+//      type DualWorld = types.type
+//      lazy val dualWorld = types
+//      def stmt2anyS = Right(_: Stmt)
+//    }
     
   }
   

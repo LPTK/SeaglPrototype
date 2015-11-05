@@ -5,7 +5,7 @@ import common._
 import scala.collection.Seq
 import scala.util.parsing.input.Positional
 
-trait Terms {
+trait Terms extends PrettyPrint {
   stage: Stage2 =>
   
   import scala.language.implicitConversions
@@ -14,13 +14,16 @@ trait Terms {
 //  implicit def t2stmt(a: TypeStmt): AnyStmt = Left(a)
 //  implicit def v2stmt(a: ValueStmt): AnyStmt = Right(a)
   type AnyStmt = types.Stmt | values.Stmt
-  implicit def t2stmt(a: types.Stmt): AnyStmt = Left(a)
-  implicit def v2stmt(a: values.Stmt): AnyStmt = Right(a)
+  /*implicit*/ def t2stmt(a: types.Stmt): AnyStmt = Left(a)
+  /*implicit*/ def v2stmt(a: values.Stmt): AnyStmt = Right(a)
   
   
   /** TEMPLATE FOR CLASSES COMMON TO TYPES AND VALUES */
-  trait TermsTemplate {
+  trait TermsTemplate { //extends PrettyPrint {
   terms =>
+    
+    val printer = Printer(this)
+    import printer.PrettyPrinted
     
     type DualWorld <: TermsTemplate
     val dualWorld: DualWorld
@@ -30,6 +33,10 @@ trait Terms {
     type Kind
     type Metadata
     //type Modif
+    type Modif = stage.Modif
+    
+    //implicit def stmt2anyS(a: Stmt): AnyStmt //= Left(a)
+    implicit def stmt2anyS: Stmt => AnyStmt
     
     /**
      * If patterns are not to be put in ANF, Node[+T] would be more appropriate 
@@ -101,8 +108,8 @@ trait Terms {
     // AST TERMS/STATEMENTS
     //---
     
-    sealed trait ASTTerm //extends SubTerm //extends GenTerm
-    sealed trait ASTStmt
+    sealed trait ASTTerm extends PrettyPrinted //extends SubTerm //extends GenTerm
+    sealed trait ASTStmt extends PrettyPrinted
     //object AST {
       
     case class Lambda(pattern: Node, body: Node) extends ASTTerm
@@ -125,8 +132,8 @@ trait Terms {
     // CORE TERMS/STATEMENTS
     //---
     
-    sealed trait CoreTerm
-    sealed trait CoreStmt
+    sealed trait CoreTerm extends PrettyPrinted
+    sealed trait CoreStmt extends PrettyPrinted
     //object Core {
       
     case class Closure(param: Ident, body: Node) extends CoreTerm with SubTerm
@@ -146,7 +153,7 @@ trait Terms {
     type Stmt = ASTStmt
     //type Modif = Ls[Modifier]
     
-    case class Node(term: Term) extends Positional { def md = SourceCode(pos) }
+    case class Node(term: Term) extends Positional with printer.PrettyPrinted { def md = SourceCode(pos) }
     type SubNode = Node
     
   }
@@ -157,14 +164,14 @@ trait Terms {
     type Stmt = CoreStmt
     //type Modif = Modification
     
-    case class Node(term: Term, md: Origin)
+    case class Node(term: Term, md: Origin) extends printer.PrettyPrinted
     
   }
   
   trait ANF extends Core {
     
     //case class Node(term: Term, md: Origin)
-    class SubNode(override val term: CoreTerm with SubTerm, md: Origin) extends Node(term, md)
+    class SubNode(override val term: CoreTerm with SubTerm, md: Origin) extends Node(term, md) with printer.PrettyPrinted
     
   }
 

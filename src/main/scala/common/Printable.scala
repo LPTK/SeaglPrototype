@@ -21,8 +21,10 @@ object Printable {
   implicit val strPrintable = new Printable[Str] {
     def print(x: Str)(implicit po: PrintOptions) = x
   }
-
+  
+  import scala.language.implicitConversions
   implicit def toDoc[T: Printable](x: T): Doc = new Doc((implicitly[Printable[T]] print x)())
+  def print[T: Printable](x: T) = toDoc(x)
 }
 
 case class Doc(print: Str) // TODO use PrintOptions instead
