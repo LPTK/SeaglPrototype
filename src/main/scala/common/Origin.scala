@@ -8,6 +8,11 @@ trait Origin extends Metadata.Entry {
   
   def + (that: Origin) = MixedOrg(this, that)
   
+  override def toString = this match {
+    case SourceCode(pos) => pos.toString()//"[]"
+    case MixedOrg(orgs @ _*) => orgs mkString ("[",";","]")
+    case Synthetic(cre, met) => met.fold("[$cre]")(o => s"[$cre ($o)]")
+  }
 }
 case class MixedOrg(orgs: Origin*) extends Origin
 case class SourceCode(pos: Position) extends Origin

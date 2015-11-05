@@ -204,7 +204,7 @@ self =>
   def pgrm = phrase(block(0) <~ emptyLines)
 
   /** Block of code indented at `ind` */
-  def block(ind: Int): Parser[Term] = "block" ! indentedLines(ind, genTerm(State(ind, false))) ^^ Block.apply
+  def block(ind: Int): Parser[Term] = "block" ! positioned(indentedLines(ind, genTerm(State(ind, false))) ^^ Block.apply)
   
   def indentedLines[T](ind: Int, p: Parser[T]): Parser[List[T]] = 
     (emptyLines ~> atIndent(ind) ~> p) ~ rep(newLine ~> emptyLines ~> atIndent(ind) ~> p) ^^ mk(_ :: _) /*{
@@ -212,11 +212,11 @@ self =>
     }*/
   
   def lambdaBlock(ind: Int): Parser[Lambda] =
-    indentedLines(ind, "|" ~> space.? ~> lambdaBranch(State(ind, true))) ^^ Lambda.apply
+    positioned(indentedLines(ind, "|" ~> space.? ~> lambdaBranch(State(ind, true))) ^^ Lambda.apply)
   
   def air[T](p: Parser[T]) = space.? ~> p <~ space.?
   
-  def lambda(implicit st: State): Parser[Lambda] = "lambda" ! (
+  def lambda(implicit st: State): Parser[Lambda] = "lambda" ! positioned(
     (rep1sep(lambdaBranch(st), air("|")) ^^ Lambda.apply)
   | newLine ~> indented(lambdaBlock, strict = st.inLambda)
   )
@@ -237,27 +237,29 @@ self =>
   implicit class MkTilde[A](a: A) {
     def ~~[B](b: B) = self.~(a, b)
   }
-
+  
+  // not positioned
   def ReduceOps: (Term ~ List[Operator ~ Option[Term]]) => Term = {
     case t ~ Nil => t
     case t ~ ((op ~ None) :: ls) => ReduceOps(OpAppL(t, op) ~~ ls)
     case t ~ ((op ~ Some(t2)) :: ls) => ReduceOps(App(OpAppL(t, op), t2) ~~ ls)
   }
   
-  def opAppLefts(subParser: Parser[Term], precLevel: Int = precedenceLevels.head)(implicit st: State): Parser[Term] = s"binary($precLevel)" ! (
-    if (precLevel > precedenceLevels.last) subParser
-    else opAppLefts(subParser, precLevel+1) ~ rep(
-      operatorAtLevel(precLevel) ~ opAppLefts(subParser, precLevel+1).?
-    ) ^^ ReduceOps
-  )
+  def opAppLefts(subParser: Parser[Term], precLevel: Int = precedenceLevels.head)(implicit st: State): Parser[Term] =
+    s"binary($precLevel)" ! positioned(
+      if (precLevel > precedenceLevels.last) subParser
+      else opAppLefts(subParser, precLevel+1) ~ rep(
+        operatorAtLevel(precLevel) ~ opAppLefts(subParser, precLevel+1).?
+      ) ^^ ReduceOps
+    )
   
-  def compactTerm(implicit st: State): Parser[Term] = "compTerm" !! (rep1(
+  def compactTerm(implicit st: State): Parser[Term] = "compTerm" !! positioned(rep1(
 //    subTerm ~ rep1(operator ~ subTerm.?) ^^ ReduceOps
     opAppLefts(subTerm)
   | subTerm
   ) ^^ { _ reduceLeft App })
   
-  def subTerm(implicit st: State): Parser[Term] = "subTerm" ! (rep1(
+  def subTerm(implicit st: State): Parser[Term] = "subTerm" ! positioned(rep1(
     symbol ^^ Id
   | atom ^^ Id
   | acceptMatch("string litteral", {case StrLit(str) => Literal(str)})
@@ -272,15 +274,16 @@ self =>
   
   def spaceAppsTerm(implicit st: State): Parser[Term] =
 //    rep1sep(compactTerm, space) <~ space.? ^^ { _ reduceLeft App }
-    rep1sep(compactTerm, space) ^^ { _ reduceLeft App }
+    positioned(rep1sep(compactTerm, space) ^^ { _ reduceLeft App })
   
-  def spacedOpAppLefts(precLevel: Int = precedenceLevels.head)(implicit st: State): Parser[Term] = s"spBinary($precLevel)" ! (
-    if (precLevel > precedenceLevels.last) spaceAppsTerm
-    else spacedOpAppLefts(precLevel+1) ~ rep(air(operatorAtLevel(precLevel, true)) ~ spacedOpAppLefts(precLevel+1).?) ^^ ReduceOps
-  )
+  def spacedOpAppLefts(precLevel: Int = precedenceLevels.head)(implicit st: State): Parser[Term] =
+    s"spBinary($precLevel)" ! positioned(
+      if (precLevel > precedenceLevels.last) spaceAppsTerm
+      else spacedOpAppLefts(precLevel+1) ~ rep(air(operatorAtLevel(precLevel, true)) ~ spacedOpAppLefts(precLevel+1).?) ^^ ReduceOps
+    )
   
   /** Note: not sure if multiLine param useful */ 
-  def term(multiLine: Bool)(implicit st: State): Parser[Term] = "term" ! (
+  def term(multiLine: Bool)(implicit st: State): Parser[Term] = "term" ! positioned( // FIXME: will consume the space into the position?
     (spacedOpAppLefts() <~ space.?)
   ~ (if (multiLine) newLine ~> indented(block) else nothing).? ^^ {
     case t ~ None => t
@@ -289,10 +292,10 @@ self =>
   
   def genTerm(implicit st: State, trailingOp: Bool = false): Parser[Term] =
 //    rep1sep(genTermWithoutSemi, air(";")) ^^ Block.apply
-      rep(genTermWithoutSemi(false) <~ air(";")) ~ genTermWithoutSemi(true) ^^ mk((ls,t) => Block(ls :+ t)) //{ case ls ~ t => Block(ls :+ t) }
+      positioned(rep(genTermWithoutSemi(false) <~ air(";")) ~ genTermWithoutSemi(true) ^^ mk((ls,t) => Block(ls :+ t))) //{ case ls ~ t => Block(ls :+ t) }
   
   /** genTerm adds to term: lambdas, newline ops, newline blocks */
-  def genTermWithoutSemi(multiLine: Bool)(implicit st: State, trailingOp: Bool = false): Parser[Term] = "genTerm" !! (rep1sep(
+  def genTermWithoutSemi(multiLine: Bool)(implicit st: State, trailingOp: Bool = false): Parser[Term] = "genTerm" !! positioned(rep1sep(
     lambda
   | "nl op" ! (if (multiLine) (
         (term(true) <~ newLine) ~ indented(opBlock, strict = false)
@@ -321,7 +324,7 @@ self =>
   def modification = (modifier <~ space.?).*
   
 //  def let(implicit st: State): Parser[Term] = "let" ! ((termWithoutSemis(false) <~ air("=")) ~ genTerm) ^^ {
-  def let(implicit st: State): Parser[Term] = "let" ! (
+  def let(implicit st: State): Parser[Term] = "let" ! positioned(
     /*(modifier <~ space.?).**/modification ~ binding ^^ { 
       case ms ~ (a ~ b) => Let(a, b, ms) }
   | (rep1(modifier <~ space.?) <~ newLine) ~ indented(ind => indentedLines(ind, modification ~ binding(st copy (ind = ind)))) ^^ {

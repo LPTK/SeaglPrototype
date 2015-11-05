@@ -4,6 +4,12 @@ import utils._
 import common._
 //import scala.text.Document
 
+/**
+  * TODO:
+  *   use Document
+  *   auto-parenthesize (use precedence values)
+  *   use context to generate fresh ids
+  */
 trait PrettyPrint {
 //self: Terms# TermsTemplate =>
 self: Terms =>
@@ -56,6 +62,11 @@ self: Terms =>
 //    }
 //    def print(x: ComTerm) = x match {
 //      case _ => ???
+//    }
+    
+    
+//    implicit val mdPrint: Printable[Metadata] = Printable {
+//      case org: Origin => org.toString
 //    }
     
     implicit val modifPrint: Printable[Modif] = Printable {
