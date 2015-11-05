@@ -3,25 +3,33 @@ package front2
 import utils._
 import common._
 import scala.collection.Seq
+import scala.util.parsing.input.Positional
 
 trait Terms {
   stage: Stage2 =>
   
-  type AnyStmt = TypeStmt | ValueStmt
-  implicit def t2stmt(a: TypeStmt): AnyStmt = Left(a)
-  implicit def v2stmt(a: ValueStmt): AnyStmt = Right(a)
+  import scala.language.implicitConversions
+  
+//  type AnyStmt = TypeStmt | ValueStmt
+//  implicit def t2stmt(a: TypeStmt): AnyStmt = Left(a)
+//  implicit def v2stmt(a: ValueStmt): AnyStmt = Right(a)
+  type AnyStmt = types.Stmt | values.Stmt
+  implicit def t2stmt(a: types.Stmt): AnyStmt = Left(a)
+  implicit def v2stmt(a: values.Stmt): AnyStmt = Right(a)
   
   
   /** TEMPLATE FOR CLASSES COMMON TO TYPES AND VALUES */
-  abstract class TermsTemplate {
+  trait TermsTemplate {
   terms =>
     
     type DualWorld <: TermsTemplate
     val dualWorld: DualWorld
     
     type Term
+    type Stmt
     type Kind
     type Metadata
+    //type Modif
     
     /**
      * If patterns are not to be put in ANF, Node[+T] would be more appropriate 
@@ -35,20 +43,22 @@ trait Terms {
 //    val SubNode: (SubTerm, Metadata) => SubNode
 //    // Would also need a NodeTrait with terma and md...
     
-    trait Stmt extends ASTStmt with CoreStmt
+    //trait Stmt extends ASTStmt with CoreStmt
     
     ///** Terms valid as the body of a `Let` (any term) */
     /** Terms that are BOTH AST and Core */
-    sealed trait GenTerm extends ASTTerm with CoreTerm // TODO rename to ComTerm
+    sealed trait ComTerm extends ASTTerm with CoreTerm
     
     /** Terms valid as subexpressions (in ANF) */
     sealed trait SubTerm //extends GenTerm //with ASTTerm with CoreTerm
+    
+    sealed trait ComStmt extends ASTStmt with CoreStmt
     
     //---
     // COMMON TERMS/STATEMENTS
     //---
     
-    sealed trait Literal[T] extends SubTerm with GenTerm {
+    sealed trait Literal[T] extends SubTerm with ComTerm {
       def value: T
     }
     object Literal {
@@ -68,30 +78,30 @@ trait Terms {
     case class IntLit(value: BigInt) extends Literal[BigInt]
     case class RatLit(value: Rational) extends Literal[Rational]
     
-    case class Id(ident: Ident) extends SubTerm with GenTerm
+    case class Id(ident: Ident) extends SubTerm with ComTerm
     
-    case class Atom(name: Sym, args: Ls[SubNode]) extends SubTerm with GenTerm
+    case class Atom(name: Sym, args: Ls[SubNode]) extends SubTerm with ComTerm
     
     //case class Tuple(first: TNode, second: TNode) extends SubTerm // first class or not..?
     
-    case class App(fun: SubNode, arg: SubNode) extends GenTerm
+    case class App(fun: SubNode, arg: SubNode) extends ComTerm
     
     // case class Dual(t: dualWorld.Term) extends Term
-    case class DepApp(fun: SubNode, darg: dualWorld.SubNode) extends GenTerm
+    case class DepApp(fun: SubNode, darg: dualWorld.SubNode) extends ComTerm
     
-    case class Block(stmts: Ls[AnyStmt], ret: Node) extends GenTerm
+    case class Block(stmts: Ls[AnyStmt], ret: Node) extends ComTerm
     
-    case class Ascribe(v: SubNode, k: Kind) extends SubTerm with GenTerm
+    case class Ascribe(v: SubNode, k: Kind) extends SubTerm with ComTerm
     
     
-    case class Let(modif: Modif, pattern: Node, body: Node, where: Ls[AnyStmt] = Ls()) extends Stmt with ASTTerm
+    case class Let(modif: Modif, pattern: Node, body: Node, where: Ls[AnyStmt] = Ls()) extends ComStmt with ASTTerm
     
     
     //---
     // AST TERMS/STATEMENTS
     //---
     
-    sealed trait ASTTerm extends SubTerm //extends GenTerm
+    sealed trait ASTTerm //extends SubTerm //extends GenTerm
     sealed trait ASTStmt
     //object AST {
       
@@ -129,51 +139,83 @@ trait Terms {
     
   }
   
+  trait AST extends TermsTemplate {
+    type DualWorld <: AST
+    
+    type Term = ASTTerm
+    type Stmt = ASTStmt
+    //type Modif = Ls[Modifier]
+    
+    case class Node(term: Term) extends Positional { def md = SourceCode(pos) }
+    type SubNode = Node
+    
+  }
+  
+  trait Core extends TermsTemplate {
+    
+    type Term = CoreTerm
+    type Stmt = CoreStmt
+    //type Modif = Modification
+    
+    case class Node(term: Term, md: Origin)
+    
+  }
+  
+  trait ANF extends Core {
+    
+    //case class Node(term: Term, md: Origin)
+    class SubNode(override val term: CoreTerm with SubTerm, md: Origin) extends Node(term, md)
+    
+  }
+
+  
   
   /** Object instantiating type terms */
-  object types extends TermsTemplate {
-    type DualWorld = values.type
-    lazy val dualWorld = values
-    
-    type Kind = Types.TypeKind
-    
-    type Term = Type
-    
-    type Node = TypeNode
-    type SubNode = Node //TypeSubNode
-    
-    //type Metadata = TypeMetadata
-    
-    /** TYPE-ONLY TERMS */
-    
-    //case class Ascribe(v: ValueNode, k: Types.TypeKind) extends types.ComTerm
-    
-  }
+  val types: TermsTemplate
+//  object types extends TermsTemplate {
+//    type DualWorld = values.type
+//    lazy val dualWorld = values
+//    
+//    type Kind = Types.TypeKind
+//    
+//    type Term = Type
+//    
+//    type Node = TypeNode
+//    type SubNode = Node //TypeSubNode
+//    
+//    //type Metadata = TypeMetadata
+//    
+//    /** TYPE-ONLY TERMS */
+//    
+//    //case class Ascribe(v: ValueNode, k: Types.TypeKind) extends types.ComTerm
+//    
+//  }
   
   /** Object instantiating value terms */
-  object values extends TermsTemplate {
-    type DualWorld = types.type
-    val dualWorld = types
-    
-    type Kind = Type
-    
-    type Term = Value
-    
-    type Node = ValueNode
-    type SubNode = ValueSubNode
-    
-    //type Metadata = ValueMetadata
-    
-    
-    /** VALUE-ONLY TERMS */
-    
-    //case class Ascribe(v: ValueNode, t: TypeNode) extends values.ComTerm
-    
-    //case class Impure(n: Node) extends values.ComStmt
-    
-  }
+  val values: TermsTemplate
+//  object values extends TermsTemplate {
+//    type DualWorld = types.type
+//    val dualWorld = types
+//    
+//    type Kind = Type
+//    
+//    type Term = Value
+//    
+//    type Node = ValueNode
+//    type SubNode = ValueSubNode
+//    
+//    //type Metadata = ValueMetadata
+//    
+//    
+//    /** VALUE-ONLY TERMS */
+//    
+//    //case class Ascribe(v: ValueNode, t: TypeNode) extends values.ComTerm
+//    
+//    //case class Impure(n: Node) extends values.ComStmt
+//    
+//  }
   
-  case class Impure(n: values.Node) extends values.Stmt
+  case class Impure(n: values.Node) extends values.ComStmt
   
   /** ModBlock has a common definition for both types and values, so we provide a common extractor */ 
   object ModBlock {
@@ -182,5 +224,8 @@ trait Terms {
       case values.ModBlock(modifs, stmts) => Some(modifs, stmts)
     }
   }
+  
+  type Type = types.Term
+  type Value = types.Term
   
 }

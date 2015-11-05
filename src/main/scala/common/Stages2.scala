@@ -14,64 +14,79 @@ import scala.util.parsing.input.Positional
   */
 trait Stage2 extends Terms {
   
-  type Type
-  type Value
-  
-  type TypeStmt
-  type ValueStmt
-  
-//  /** Info stored with each Node */
-//  type TypeMetadata
-//  type ValueMetadata
-  
-  type TypeNode
-  type ValueNode
-  
-  /** Subnodes may refine TermsTemplate#Node with stricter bounds or additional info */
-  //type TypeSubNode// <: types.Node
-  type ValueSubNode// <: values.Node
-  
+//  type Type
+//  type Value
+//  
+//  type TypeStmt
+//  type ValueStmt
+//  
+////  /** Info stored with each Node */
+////  type TypeMetadata
+////  type ValueMetadata
+//  
+//  type TypeNode
+//  type ValueNode
+//  
+//  /** Subnodes may refine TermsTemplate#Node with stricter bounds or additional info */
+//  //type TypeSubNode// <: types.Node
+//  type ValueSubNode// <: values.Node
+//  
   type Modif
   
 }
 
 object Stages2 {
-
+  
   // Main compilation stages:
 
   object AST extends Stage2 with PretypedStage {
     
-    type Type = types.ASTTerm
-    type Value = values.ASTTerm
-    
-    type TypeStmt = types.ASTStmt
-    type ValueStmt = values.ASTStmt
-    
-    class Pos extends Positional { def md = SourceCode(pos) }
-    case class TypeNode(term: Type) extends Pos
-    case class ValueNode(term: Value) extends Pos
-    //type TypeSubNode = types.Node
-    type ValueSubNode = values.Node
-    
+//    type Type = types.ASTTerm
+//    type Value = values.ASTTerm
+//    
+//    type TypeStmt = types.ASTStmt
+//    type ValueStmt = values.ASTStmt
+//    
+//    class Pos extends Positional { def md = SourceCode(pos) }
+//    case class TypeNode(term: Type) extends Pos
+//    case class ValueNode(term: Value) extends Pos
+//    //type TypeSubNode = types.Node
+//    type ValueSubNode = values.Node
+//    
     type Modif = Ls[Modifier]
+    
+    object valuez extends TermsTemplate with AST {
+      type DualWorld = types.type
+      val dualWorld = types
+      
+      type Kind = Type
+    }
+    object typez extends TermsTemplate with AST {
+      type DualWorld = values.type
+      lazy val dualWorld = values
+      
+      type Kind = Types.TypeKind
+    }
+    val values = valuez
+    val types = typez
     
   }
   
   object ANF extends Stage2 with PretypedStage with ANFStage {
     
-    case class TypeNode(term: Type, md: Origin)
-    case class ValueNode(term: Value, md: Origin)
-    
-    class ValueSubNode(override val term: values.CoreTerm with values.SubTerm, md: Origin) extends ValueNode(term, md)
+//    case class TypeNode(term: Type, md: Origin)
+//    case class ValueNode(term: Value, md: Origin)
+//    
+//    class ValueSubNode(override val term: values.CoreTerm with values.SubTerm, md: Origin) extends ValueNode(term, md)
     
   }
   
-  object Typed extends Stage2 with ANFStage {
-    
-//    case class TypeMetadata(typ: Type, org: Origin)
-//    case class ValueMetadata(kin: Types.TypeKind, org: Origin)
-    
-  }
+//  object Typed extends Stage2 with ANFStage {
+//    
+////    case class TypeMetadata(typ: Type, org: Origin)
+////    case class ValueMetadata(kin: Types.TypeKind, org: Origin)
+//    
+//  }
   
 
   // Common Stage-related definitions:
@@ -87,17 +102,43 @@ object Stages2 {
   trait ANFStage {
   self: Stage2 =>
     
-    type Type = types.CoreTerm //types.GenTerm
-    type Value = values.CoreTerm
-    
-    type TypeStmt = types.CoreStmt
-    type ValueStmt = values.CoreStmt
-    
-    //type TypeSubNode = types.Node
-    //class ValueSubNode(override val term: values.SubTerm, md: ValueMetadata) extends values.Node(term, md)
-    //class ValueSubNode(override val term: values.SubTerm, md: ValueMetadata) extends ValueNode(term, md)
-    
+//    type Type = types.CoreTerm //types.GenTerm
+//    type Value = values.CoreTerm
+//    
+//    type TypeStmt = types.CoreStmt
+//    type ValueStmt = values.CoreStmt
+//    
+//    //type TypeSubNode = types.Node
+//    //class ValueSubNode(override val term: values.SubTerm, md: ValueMetadata) extends values.Node(term, md)
+//    //class ValueSubNode(override val term: values.SubTerm, md: ValueMetadata) extends ValueNode(term, md)
+//    
     type Modif = Modification
+    
+    object types extends TermsTemplate with Core {
+      type DualWorld = values.type
+      lazy val dualWorld = values
+      
+      type Kind = Types.TypeKind
+      
+      type SubNode = Node
+    } 
+    
+    object values extends TermsTemplate with ANF {
+      type DualWorld = types.type
+      val dualWorld = types
+      
+      type Kind = Type
+    }
+    
+  }
+  
+  trait Common { // TODO use
+  self: Stage2 =>
+    
+    class Template[DW <: TermsTemplate](dw: DW) extends TermsTemplate {
+      type DualWorld = DW
+      lazy val dualWorld = dw
+    }
     
   }
   

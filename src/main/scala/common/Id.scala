@@ -1,5 +1,7 @@
 package common
 
+import scala.language.implicitConversions
+
 import utils._
 
 abstract class Id(kind: Str) {

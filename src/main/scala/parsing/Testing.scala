@@ -3,6 +3,8 @@ package parsing
 import java.io.PrintStream
 import java.nio.charset.Charset
 
+import front2.ToANF
+
 import scala.io.StdIn._
 
 import utils._
@@ -85,15 +87,17 @@ object ParserREPL extends App {
 //      val pgrm = phrase(compactTerm(State(0, false)))(new lexical.Scanner(code))
       println(post + pgrm)
 //      import simple._
-//      pgrm match {
-//        case Parser.Success(pgrm, _) =>
-//          val r = try {
-//            Terms.Block(Nil, (Builder.apply _) <|: pgrm)
-//          } catch {
-//            case common.CompileError(msg) => "Compile Error: "+msg
-//          }
-//          println(r)
-//      }
+      pgrm match {
+        case Parser.Success(pgrm, _) =>
+          val r = try {
+            //Terms.Block(Nil, (Builder.apply _) <|: pgrm)
+            ToANF.vconv.nod(pgrm)
+          } catch {
+            case common.CompileError(msg) => "Compile Error: "+msg
+          }
+          println(r)
+        case _ =>
+      }
       
     } catch {
       case Parser.lexical.ParseException(msg) => "Parse error: " + msg

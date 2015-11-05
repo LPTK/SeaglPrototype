@@ -405,9 +405,9 @@ object ASTProxy {
   import values._
   import Parser.lexical._
   
-  type Term = ValueNode//values.Term
-  type Lambda = ValueNode//values.Term
-  val N = ValueNode
+  type Term = Node//values.Term
+  type Lambda = Node//values.Term
+  val N = Node
   
   implicit def Op(op: Operator): front2.Operator = op match {
     case SymbolOperator(chars) => front2.SymbolOperator(chars)

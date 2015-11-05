@@ -1,5 +1,6 @@
 package front2
 
+import front2.SeparateTypes.tconv._
 import utils._
 
 import common._
@@ -14,6 +15,9 @@ toanf =>
   /**
    * Stores the transformed object (in `res`) as well as the new statements that the transformation has generated (in `genStmts`)
    * Note: could be done with a State monad?
+   * 
+   * Values nodes generate new statements while extracting non-sub-terms from sub-term position (eg: "f a" in "f a b")
+   * Both values and types may also generate statements when removing the ModBlock syntactic tree. 
    */
   case class Result[+T](genStmts: Ls[b.AnyStmt], res: T)
   implicit object Result extends Monad[Result] {
@@ -27,8 +31,8 @@ toanf =>
   import Result._
   
   /** `tstmt` and `vstmt` are never supposed to be called -- `process` will deal with statements directly */
-  def tstmt(x: a.TypeStmt): Result[b.TypeStmt] = wtf
-  def vstmt(x: a.ValueStmt): Result[b.ValueStmt] = wtf
+//  def tstmt(x: a.TypeStmt): Result[b.TypeStmt] = wtf
+//  def vstmt(x: a.ValueStmt): Result[b.ValueStmt] = wtf
   
   /** Expects that in AST, ModBlocks have the modifier Type if it contains type statements */
   override def process(x: a.AnyStmt): Result[b.AnyStmt] = {
@@ -40,8 +44,9 @@ toanf =>
           if (modifs contains Type) b.types.RecBlock(sts2) |> b.t2stmt |> lift
           else b.values.RecBlock(sts2) |> b.v2stmt |> lift
         else Result(sts2.init, sts2.last)
-      case x: a.types.Stmt => tconv.process(x) map Left.apply
-      case x: a.values.Stmt => vconv.process(x) map Right.apply
+      // DEAD:
+      //case x: a.types.Stmt => tconv.stmt(x) map Left.apply
+      //case x: a.values.Stmt => vconv.stmt(x) map Right.apply
     }
   }
   
@@ -51,12 +56,13 @@ toanf =>
   val tconv: AnfTermsConverter[AST.types.type,ANF.types.type] = new AnfTermsConverter(AST.types, ANF.types) {
     val co: vconv.type = vconv
     
-    def blockAsTerm = ??? //identity
+    //def blockAsTerm = ??? //identity
     
     def kin(x: ta.Kind): Result[tb.Kind] = x |> lift
     
+    
     /** For types, we know nodes will never generate additional statements (types.App is not moved out of subexpressions) */
-    def nod(x: ta.Node): Result[tb.Node] = b.TypeNode(ast2Core(x.term).res, x.md) |> lift
+    def nod(x: ta.Node): Result[tb.Node] = tb.Node(ast2Core(x.term).res, x.md) |> lift
     
     //def snod(x: ta.SubNode): Result[tb.SubNode] = b.TypeNode(ast2Core(x.term).res, x.md) |> lift
     def snod(x: ta.SubNode): Result[tb.SubNode] = nod(x)
@@ -66,7 +72,7 @@ toanf =>
         case ta.Lambda(id: Ident, bo) => tb.Closure(id, nod(bo).res)
         case ta.Lambda(pa, bo) =>
           val id = new SyntheticId(nameHint(pa.term))
-          val idn = b.TypeNode(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
+          val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
           val let = tb.Let(Modification(false), nod(pa).res, idn)
           val bo2 = nod(bo).res
           tb.Closure(id, mkBlock(let)(bo2)) // TODO the right thing (closure aggregates stmts) //{b.TypeNode(_, bo2.md)})
@@ -78,10 +84,10 @@ toanf =>
         case _ => ??? // TODO
       }) |> lift
     
-    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = b.TypeNode(ret.term match {
-      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) |> blockAsTerm
-      case _ => tb.Block(stmts toList, ret) |> blockAsTerm
-    }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
+//    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = tb.Node(ret.term match {
+//      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) |> blockAsTerm
+//      case _ => tb.Block(stmts toList, ret) |> blockAsTerm
+//    }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
     
   }
   
@@ -89,28 +95,29 @@ toanf =>
   val vconv = new AnfTermsConverter(AST.values, ANF.values) {
     val co: tconv.type = tconv
     
-    def blockAsTerm = ??? //identity
+    //def blockAsTerm = ??? //identity
     
     def kin(x: ta.Kind): Result[tb.Kind] = tconv.ast2Core(x)
     
-    def nod(x: ta.Node): Result[tb.Node] = ast2Core(x.term) map {b.ValueNode(_, x.md)}
+    def nod(x: ta.Node): Result[tb.Node] = ast2Core(x.term) map {tb.Node(_, x.md)}
     
     /** For values, a simple node may generate several new statements */
     def snod(x: ta.SubNode): Result[tb.SubNode] = {
       val Result(sts, ret) = ast2Core(x.term)
       val (s,t) = ret match {
         case ret: tb.SubTerm => (Nil, ret)
-        case ret =>
+        case _ =>
           val id = new SyntheticId(nameHint(x.term))
           val idt = tb.Id(id)
-          val idn = b.ValueNode(idt, Synthetic(phaseName, x.md))
-          val let = tb.Let(Modification(false), idn, b.ValueNode(ret, x.md)) |> b.v2stmt //: b.AnyStmt
+          val idn = tb.Node(idt, Synthetic(phaseName, x.md))
+          val let = tb.Let(Modification(false), idn, tb.Node(ret, x.md)) |> b.v2stmt //: b.AnyStmt
           (let :: Nil, idt)
       }
-      Result(sts ++ s, new b.ValueSubNode(t, x.md))
+      Result(sts ++ s, new tb.SubNode(t, x.md))
     }
     
     def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm] = x match {
+      case x: ta.ComTerm => process(x)
       case ta.Lambda(id: Ident, bo) => //nod(bo) map {tb.Closure(id, _)}
         //val Result(sts, ret) = nod(bo)
         (nod(bo) match {
@@ -120,7 +127,7 @@ toanf =>
       case ta.Lambda(pa, bo) =>
         // FIXME: what to do with the statements introduced by the pattern??
         val id = new SyntheticId(nameHint(pa.term))
-        val idn = b.ValueNode(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
+        val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
         for {
           pa <- nod(pa)
           let = tb.Let(Modification(false), pa, idn): b.AnyStmt
@@ -129,24 +136,32 @@ toanf =>
         } yield tb.Closure(id, mkBlock(let :: sts : _*)(bo2))
       case _ => ??? // TODO OpApp, Let, etc.
     }
-    
-    /** TODO: that's almost the same as in tconv :( ... would be nice to refactor */
-    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = b.ValueNode(ret.term match {
-      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) |> blockAsTerm
-      case _ => tb.Block(stmts toList, ret) |> blockAsTerm
-    }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
-    
+//    
+//    /** TODO: that's almost the same as in tconv :( ... would be nice to refactor */
+//    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = tb.Node(ret.term match {
+//      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) |> blockAsTerm
+//      case _ => tb.Block(stmts toList, ret) |> blockAsTerm
+//    }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
+//    
   }
   
   
-  abstract class AnfTermsConverter[TA <: a.TermsTemplate, TB <: b.TermsTemplate { type Term = TB# CoreTerm }](val _ta: TA, val _tb: TB)
+  //abstract class AnfTermsConverter[TA <: a.TermsTemplate, TB <: b.TermsTemplate { type Term = TB# CoreTerm }](val _ta: TA, val _tb: TB)
+  abstract class AnfTermsConverter[TA <: a.TermsTemplate, TB <: b.Core](val _ta: TA, val _tb: TB)
   extends TermsConverter[TA,TB](_ta,_tb) {
     
-    def blockAsTerm: tb.Block => tb.Term
+    //def blockAsTerm: tb.Block => tb.Term
     
     def nameHint(x: ta.Term): ?[Sym] = None
     
     def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm]
+    
+    /** `types.stmt` and `values.stmt` are never supposed to be called -- `toanf.process` will deal with statements directly */
+    def stmt(x: ta.Stmt) = wtf 
+//    x match {
+//      case x: ta.ComStmt => process(x)
+//      case x: ta.ASTStmt => ???
+//    }
     
     //def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm] = ???
     //def ast2Gen(x: ta.ASTTerm): Result[tb.GenTerm] = ???
@@ -161,6 +176,12 @@ toanf =>
 //      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) |> blockAsTerm
 //      case _ => tb.Block(stmts toList, ret) |> blockAsTerm
 //    }) //, ret.md // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
+    
+    /** TODO: that's almost the same as in tconv :( ... would be nice to refactor */
+    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = tb.Node(ret.term match {
+      case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) //|> blockAsTerm
+      case _ => tb.Block(stmts toList, ret) //|> blockAsTerm
+    }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
     
   }
   
