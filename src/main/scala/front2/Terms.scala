@@ -1,5 +1,6 @@
 package front2
 
+import common.Printable.PrintOptions
 import utils._
 import common._
 import scala.collection.Seq
@@ -44,8 +45,10 @@ trait Terms extends PrettyPrint {
     /**
      * If patterns are not to be put in ANF, Node[+T] would be more appropriate 
      */
-    type Node //case class Node(term: Term, md: Metadata)
-    type SubNode //<: Node
+    type Node <: SelfPrintable //case class Node(term: Term, md: Metadata)
+    def Node(term: Term, md: Metadata): Node
+    type SubNode <: SelfPrintable //<: Node
+    def SubNode(term: SubTerm with Term, md: Metadata): SubNode
 //    type NodeType = { val term: Term; val md: Metadata }
 //    type Node <: NodeType //case class Node(term: Term, md: Metadata)
 //    type SubNode <: NodeType //<: Node
@@ -106,6 +109,9 @@ trait Terms extends PrettyPrint {
     
     case class Let(modif: Modif, pattern: Node, body: Node, where: Ls[AnyStmt] = Ls()) extends ComStmt with ASTTerm
     
+    /** TODO discard in type world at type-checking */
+    case class Impure(n: Node) extends ComStmt //values.ComStmt// ComStmt with values.ComStmt
+    
     
     //---
     // AST TERMS/STATEMENTS
@@ -151,23 +157,35 @@ trait Terms extends PrettyPrint {
   
   trait AST extends TermsTemplate {
     type DualWorld <: AST
+    type Metadata = SourceCode
     
     type Term = ASTTerm
     type Stmt = ASTStmt
     //type Modif = Ls[Modifier]
     
-    case class Node(term: Term) extends Positional with printer.PrettyPrinted { def md = SourceCode(pos) }
+    //case class Node(term: Term) extends Positional with printer.PrettyPrinted { def md = SourceCode(pos) }
+    case class Node(term: Term) extends Positional with printer.PrettyPrinted with SelfPrintable {
+      def md = SourceCode(pos)
+      def print(implicit po: PrintOptions) = Doc(term.toString, Metadata(md))
+    }
     type SubNode = Node
-    
+//    val SubNode = Node
+    def Node(term: Term, md: Metadata) = Node(term).setPos(md.pos)
+    def SubNode(term: SubTerm with Term, md: Metadata) = Node(term, md)
   }
   
   trait Core extends TermsTemplate {
+    type Metadata = Origin // TODO change..? require method Metadata => common.Metadata
     
     type Term = CoreTerm
     type Stmt = CoreStmt
     //type Modif = Modification
     
-    case class Node(term: Term, md: Origin) extends printer.PrettyPrinted with SelfProductPrintable
+    //case class Node(term: Term, md: Metadata) extends printer.PrettyPrinted with SelfPrintable {
+    class Node(val term: Term, val md: Metadata) extends printer.PrettyPrinted with SelfPrintable {
+      def print(implicit po: PrintOptions) = Doc(term.toString, Metadata(md))
+    }
+    def Node(term: Term, md: Metadata): Node = new Node(term, md) // it's a shame Scala fails to see it implemented with Node a case class...
     
   }
   
@@ -175,6 +193,8 @@ trait Terms extends PrettyPrint {
     
     //case class Node(term: Term, md: Origin)
     class SubNode(override val term: CoreTerm with SubTerm, md: Origin) extends Node(term, md) with printer.PrettyPrinted
+    //def SubNode(term: CoreTerm with SubTerm, md: Metadata) = new SubNode(term, md)
+    def SubNode(term: SubTerm with Term, md: Metadata): SubNode = new SubNode(term, md)
     
   }
 
@@ -225,7 +245,7 @@ trait Terms extends PrettyPrint {
 //    
 //  }
   
-  case class Impure(n: values.Node) extends values.ComStmt
+  //case class Impure(n: values.Node) extends values.ComStmt
   
   /** ModBlock has a common definition for both types and values, so we provide a common extractor */ 
   object ModBlock {
@@ -240,3 +260,15 @@ trait Terms extends PrettyPrint {
   type Value = types.Term
   
 }
+
+
+
+
+
+
+
+
+
+
+
+

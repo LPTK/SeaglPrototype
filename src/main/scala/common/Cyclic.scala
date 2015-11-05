@@ -33,6 +33,7 @@ class Cyclic[+T](expr: Cyclic[T] => T, eqtest: Opt[(T,Any) => Bool] = None, toSt
 }
 
 object Cyclic {
+  import scala.language.implicitConversions
   
 //  def apply[T](x: T) = new Cyclic[T](_ => x)
   def unapply[T](x: Cyclic[T]) = Some(x.value)

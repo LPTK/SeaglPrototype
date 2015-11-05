@@ -18,5 +18,7 @@ case object Priv extends Modifier
 
 // Summary class (some modifiers provide info that is stored elsewhere after ANF transformation)
 
-case class Modification(priv: Bool)
+case class Modification(priv: Bool) {
+  //override def toString = if (priv) "priv" else ""
+}
 

@@ -419,7 +419,7 @@ object ASTProxy {
     def apply(pa_bo: (Term, Term)*) = LambdaCompo(pa_bo map values.Lambda.tupled toList) |> N
   }
   object Block {
-    def apply(stmts: Ls[Term], ret: Term): Term = values.Block(stmts map {s => v2stmt(AST.Impure(s))}, ret) |> N
+    def apply(stmts: Ls[Term], ret: Term): Term = values.Block(stmts map {s => v2stmt(AST.values.Impure(s))}, ret) |> N
     def apply(lines: Ls[Term]): Term = mkBlock(lines: _*)
   }
   def mkBlock(lines: Term*): Term = lines match {

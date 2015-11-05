@@ -10,6 +10,6 @@ package object common {
   def warn(msg: Str) = System.err.println("Warning: "+msg)
   
   /** Often, Scala produces false positives when checking for exhaustiveness; I use this when I believe it is the case */
-  def scalasDumb = wtf("Unchecked pattern matching failed")
+  def scalasDumb(x: Any) = wtf("Unchecked pattern matching failed with object of class "+x.getClass)
   
 }

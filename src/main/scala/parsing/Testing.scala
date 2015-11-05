@@ -91,7 +91,7 @@ object ParserREPL extends App {
         case Parser.Success(pgrm, _) =>
           val r = try {
             //Terms.Block(Nil, (Builder.apply _) <|: pgrm)
-            ToANF.vconv.nod(pgrm)
+            ToANF.vconv.nod(pgrm).toBlock
           } catch {
             case common.CompileError(msg) => "Compile Error: "+msg
           }

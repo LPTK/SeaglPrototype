@@ -6,7 +6,9 @@ import utils._
 import common._
 import Stages2._
 
-
+/**
+  * TODO: properly convert patterns by reversing stmts order and let directions
+  */
 object ToANF extends StageConverter[AST.type, ANF.type](AST, ANF) {
 toanf =>
   
@@ -19,7 +21,9 @@ toanf =>
    * Values nodes generate new statements while extracting non-sub-terms from sub-term position (eg: "f a" in "f a b")
    * Both values and types may also generate statements when removing the ModBlock syntactic tree. 
    */
-  case class Result[+T](genStmts: Ls[b.AnyStmt], res: T)
+  case class Result[+T](genStmts: Ls[b.AnyStmt], res: T) {
+    def toBlock(implicit ev: T <:< b.values.Node) = b.values.Block(genStmts, res)
+  }
   implicit object Result extends Monad[Result] {
     def lift[A](a: A) = Result(Nil, a)
     def flatMap[A,B](ma: M[A], f: A => M[B]): M[B] = {
@@ -44,6 +48,8 @@ toanf =>
           if (modifs contains Type) b.types.RecBlock(sts2) |> b.t2stmt |> lift
           else b.values.RecBlock(sts2) |> b.v2stmt |> lift
         else Result(sts2.init, sts2.last)
+      //case ta.Impure(ta.Node(let: ta.Let)) => Left(vconv.process(let))
+      case a.values.Impure(a.values.Node(let: a.values.Let)) => vconv.process(let) map Right.apply
       // DEAD:
       //case x: a.types.Stmt => tconv.stmt(x) map Left.apply
       //case x: a.values.Stmt => vconv.stmt(x) map Right.apply
@@ -109,7 +115,7 @@ toanf =>
         case _ =>
           val id = new SyntheticId(nameHint(x.term))
           val idt = tb.Id(id)
-          val idn = tb.Node(idt, Synthetic(phaseName, x.md))
+          val idn = tb.Node(idt, Synthetic(phaseName, Some(x.md)))
           val let = tb.Let(Modification(false), idn, tb.Node(ret, x.md)) |> b.v2stmt //: b.AnyStmt
           (let :: Nil, idt)
       }
@@ -178,13 +184,16 @@ toanf =>
       case ta.Lambda(pa, bo) =>
         // FIXME: what to do with the statements introduced by the pattern??
         val id = new SyntheticId(nameHint(pa.term))
-        val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, pa.md))
+        val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, Some(pa.md)))
         for {
           pa <- nod(pa)
           let = tb.Let(Modification(false), pa, idn) |> tb.stmt2anyS //: b.AnyStmt
           //bo <- nod(bo)
           Result(sts, bo2) = nod(bo)
         } yield tb.Closure(id, mkBlock(let :: sts : _*)(bo2))
+      case ta.OpAppL(ar, op) => snod(ar) map {tb.App(_, tb.SubNode(tb.Id(op.id), Synthetic(phaseName, None)/*TODO better md*/))}
+      case ta.OpAppR(op, ar) => snod(ar) map {tb.App(tb.SubNode(tb.Id(op.id), Synthetic(phaseName, None)/*TODO better md*/), _)} // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
+      case ta.OpTerm(op) => tb.Id(op.id) |> lift
       case _ => ??? // TODO OpApp, Let, etc.
     }
     

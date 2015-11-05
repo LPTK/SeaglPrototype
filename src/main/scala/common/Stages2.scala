@@ -122,7 +122,7 @@ object Stages2 {
     type Modif = Modification
     
     /** Note: cannot use Template[values.type](values) here because of cyclic dependency */
-    object types extends TermsTemplate with Core with ComTypes {
+    object types extends Core with ComTypes {
       type DualWorld = values.type
       lazy val dualWorld = values
     //object types extends Template[values.type](values) with Core with ComTypes {
@@ -130,6 +130,7 @@ object Stages2 {
       type Kind = Types.TypeKind
       
       type SubNode = Node
+      def SubNode(term: SubTerm with Term, md: Metadata): SubNode = new SubNode(term, md)
       
       //def stmt2anyS(a: Stmt) = Left(a)
       //def stmt2anyS = Left.apply

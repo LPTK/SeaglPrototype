@@ -14,16 +14,19 @@ self: Terms =>
     
     trait PrettyPrinted {
       def toDoc = ((this: Any) match { // TODO use Option()
-        case x: ComStmt => print(x)
-        case x: ASTStmt => print(x)
-        case x: CoreStmt => print(x)
-        //case x: Node => print(x)
         //case x: Printable[Any] => x.print(x)()
-        case x: SelfPrintable =>
           //x.printable.print(x)()
 //          val y: x.type = x
 //          y.printable.print(y)()
+        case x: SelfPrintable =>
           x.print()
+        case x: ComStmt => print(x)
+        case x: ASTStmt => print(x)
+        case x: CoreStmt => print(x)
+        case x: ComTerm => print(x)
+        case x: ASTTerm => print(x)
+        case x: CoreTerm => print(x)
+        //case x: Node => print(x)
         case _ => null //warn("Undefined printing for "+this); super.toString
       }) |> Option.apply
       override def toString = toDoc match {
@@ -55,8 +58,14 @@ self: Terms =>
 //      case _ => ???
 //    }
     
-    implicit val comStmtPrint: Printable[ComStmt] = Printable {
-      case Let(mod, pat, bod, whe) => s"$mod let $pat = $bod" + (if (whe.isEmpty) "" else "\nwhere " + (whe mkString ";"))
+    implicit val modifPrint: Printable[Modif] = Printable {
+      case mods: Ls[_ /*Modifier*/] => (mods :+ "") mkString " "
+      case Modification(priv) => if (priv) "priv" else ""
+    }
+    
+    implicit val comStmtPrint: Printable[ComStmt] = Printable { // TODO use doc"" interpolation
+      case Let(mod, pat, bod, whe) => s"${print(mod)}$pat = $bod" + (if (whe.isEmpty) "" else "\nwhere " + (whe mkString ";"))
+      case Impure(n) => print(n)
     }
     implicit val astStmtPrint: Printable[ASTStmt] = Printable {
       case t.ModBlock(modifs, stmts) => ???
@@ -66,8 +75,33 @@ self: Terms =>
       case RecBlock(stmts) => ??? //print(ModBlock(Rec::Nil, stmts))
       case x: ComStmt => print(x)
     }
-    implicit val nodePrint: Printable[Node] = Printable {
-      case _ => ???
+//    implicit val nodePrint: Printable[Node] = Printable {
+//      case _ => ???
+//    }
+    
+    implicit val comTermPrint: Printable[ComTerm] = Printable {
+      case Literal(v) => v.toString
+      case Id(id) => id.toString
+      case Atom(nam, args) => s"`$nam" + (args mkString " ")
+      case App(fun, arg) => s"($fun $arg)"
+      case DepApp(fun, arg) => s"($fun $arg)"
+      case Block(stmts, ret) =>
+        //s"{${stmts map (_.fold(identity,identity)) mkString "; "}$ret}"
+        "{ " + ({stmts map (_.fold(identity,identity))} :+ ret mkString "; ") + " }"
+      case Ascribe(v, k) => s"$v : $k"
+    }
+    implicit val astTermPrint: Printable[ASTTerm] = Printable {
+      case t.Lambda(pat, bod) => s"($pat => $bod)"
+      case t.LambdaCompo(lams) => "{"+(lams mkString " | ")+"}" //(lams map {x => print(x)()(astTermPrint)})
+      case t.OpAppL(ar, op) => s"($ar $op)"
+      case t.OpAppR(op, ar) => s"($op $ar)"
+      case t.OpTerm(op) => s"($op)"
+      case x: ComTerm => print(x)
+      case x => scalasDumb(x)
+    }
+    implicit val coreTermPrint: Printable[CoreTerm] = Printable {
+      case Closure(par, bod) => s"$par => $bod"
+      case x: ComTerm => print(x)
     }
     
     

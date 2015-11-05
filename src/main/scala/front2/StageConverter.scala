@@ -32,7 +32,7 @@ conv =>
   }
   
   
-  abstract case class TermsConverter[+TA <: a.TermsTemplate, +TB <: b.TermsTemplate](ta: TA, tb: TB) { // TODO make vari
+  abstract case class TermsConverter[+TA <: a.TermsTemplate, +TB <: b.TermsTemplate](ta: TA, tb: TB) {
     import Result._
     
     
@@ -70,12 +70,12 @@ conv =>
 //      case x: ta.ASTTerm => process(x)
 //      // CoreTerm
 //      case x: ta.CoreTerm => process(x)
-      case _ => scalasDumb
+      case _ => scalasDumb(x)
     }
     def process(x: ta.SubTerm): Result[tb.SubTerm] = x match {
       //case x: ta.ASTTerm => process(x) // Note: for some reason, putting this case (which cannot happen) makes scalac think the rest is dead code!!
       case x: ta.ComTerm => process(x)
-      case _ => scalasDumb
+      case _ => scalasDumb(x)
     }
     def process(x: ta.ASTTerm): Result[tb.ASTTerm] = x match {
       case ta.Lambda(pa, bo) => for(pa <- nod(pa); bo <- nod(bo)) yield tb.Lambda(pa,bo)
@@ -84,13 +84,13 @@ conv =>
       case ta.OpTerm(op) => tb.OpTerm(op) |> lift
       case let: ta.Let => process(let)
       case x: ta.ComTerm => process(x)
-      case _ => scalasDumb
+      case _ => scalasDumb(x)
     }
     def process(x: ta.CoreTerm): Result[tb.CoreTerm] = x match {
       case ta.Closure(pa, bo) => //for (pa <- process(pa); bo <- process(pa))
         nod(bo) map (tb.Closure(pa, _))
       case x: ta.ComTerm => process(x)
-      case _ => scalasDumb
+      case _ => scalasDumb(x)
     }
     
     def process(x: ta.Let): Result[tb.Let] = x match {
@@ -104,19 +104,22 @@ conv =>
     
     def process(x: ta.ComStmt): Result[tb.ComStmt] = x match {
       case x: ta.Let => process(x)
-      case Impure(n) => nod(n) map (Impure(_))
+      //case Impure(n) => nod(n) map (Impure(_))
+      case ta.Impure(n) => nod(n) map (tb.Impure(_))
+      case _ => scalasDumb(x)
     }
     def process(x: ta.ASTStmt): Result[tb.ASTStmt] = x match {
       case ta.ModBlock(mo, sts) => for(mo <- mod(mo); sts <- Monad.sequence(sts map conv.process)) yield tb.ModBlock(mo, sts)
       case x: ta.ComStmt => process(x)
-      case _ => scalasDumb
+      case _ => scalasDumb(x)
     }
     def process(x: ta.CoreStmt): Result[tb.CoreStmt] = x match {
       case ta.RecBlock(sts) => for(sts <- Monad.sequence(sts map conv.process)) yield tb.RecBlock(sts)
       case x: ta.ComStmt => process(x)
-      case _ => scalasDumb
+      case _ => scalasDumb(x)
     }
   
+    /*
     /**
      * Scala fails to understand that {{{a.Impure <: a.values.ComStmt}}}, so we provide ctor/xtor to handle that case
      */
@@ -128,6 +131,7 @@ conv =>
         case _ => None
       }
     }
+    */
     
   }
 }
