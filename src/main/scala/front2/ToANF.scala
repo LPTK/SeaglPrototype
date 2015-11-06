@@ -24,7 +24,9 @@ toanf =>
    * Both values and types may also generate statements when removing the ModBlock syntactic tree. 
    */
   case class Result[+T](genStmts: Ls[b.AnyStmt], res: T) {
-    def toBlock(implicit ev: T <:< b.values.Node) = b.values.Node(b.values.Block(genStmts, res), Synthetic("toplevel", None))
+    def toBlock(implicit ev: T <:< b.values.Node) =
+      //b.values.Node(b.values.Block(genStmts, res), Synthetic("toplevel", None))
+      vconv.mkBlock(genStmts: _*)(res) // TODO use md: Synthetic("toplevel", None))
   }
   implicit object Result extends Monad[Result] {
     def lift[A](a: A) = Result(Nil, a)
@@ -40,7 +42,10 @@ toanf =>
 //  def tstmt(x: a.TypeStmt): Result[b.TypeStmt] = wtf
 //  def vstmt(x: a.ValueStmt): Result[b.ValueStmt] = wtf
   
-  /** Expects that in AST, ModBlocks have the modifier Type if it contains type statements */
+  /**
+    * Expects that in AST, ModBlocks have the modifier Type if it contains type statements
+    * Also, for now let statements in AST are wrapped as expressions in Impure statements... (don't ask)
+    */
   override def process(x: a.AnyStmt): Result[b.AnyStmt] = {
     val stmt = x.fold (identity, identity)
     stmt match {
@@ -51,7 +56,13 @@ toanf =>
           else b.values.RecBlock(sts2) |> b.v2stmt |> lift
         else Result(sts2.init, sts2.last)
       //case ta.Impure(ta.Node(let: ta.Let)) => Left(vconv.process(let))
-      case a.values.Impure(a.values.Node(let: a.values.Let)) => vconv.process(let) map Right.apply
+      case a.values.Impure(a.values.Node(let: a.values.Let)) =>
+        //vconv.process(let) map Right.apply
+        vconv.let(let) match {
+          case Result(pre, let -> Nil) => Result(pre, Right(let))
+          case Result(pre, let -> (i :+ l)) => Result(pre ++ (Right(let) :: i), l)
+        } //map Right.apply
+      case a.values.Impure(n) => vconv.nod(n) map b.values.Impure map Right.apply
       // DEAD:
       //case x: a.types.Stmt => tconv.stmt(x) map Left.apply
       //case x: a.values.Stmt => vconv.stmt(x) map Right.apply
@@ -174,11 +185,16 @@ toanf =>
     }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
    
     def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm] = x match {
+      case ta.Block(sts, ret) =>
+        val Result(pre, sts2) = Monad.sequence(sts map toanf.process)
+        nod(ret) map {tb.Block(pre ++ sts2, _)}
+        //???
       case x: ta.ComTerm => process(x)
       case x: ta.Let =>
         //process(x: ta.ComStmt) flatMap {s => Result(tb.stmt2anyS(s) :: Nil, tb.Literal(()))}
         // eqtly
-        val Result(sts, res) = process(x: ta.ComStmt); Result(sts :+ tb.stmt2anyS(res), () |> tb.Literal.apply)
+        //val Result(sts, res) = process(x: ta.ComStmt); Result(sts :+ tb.stmt2anyS(res), () |> tb.Literal.apply)
+        val Result(sts, (res, post)) = let(x); Result((sts :+ tb.stmt2anyS(res)) ++ post, () |> tb.Literal.apply)
       //case ta.Lambda(id: Ident, bo) => //nod(bo) map {tb.Closure(id, _)}
       case ta.Lambda(ta.Node(ta.Id(id)), bo) =>
         //val Result(sts, ret) = nod(bo)
@@ -207,18 +223,31 @@ toanf =>
       case ta.OpAppL(ar, op) => snod(ar) map {tb.App(_, tb.SubNode(tb.Id(op.id), Synthetic(phaseName, None)/*TODO better md*/))}
       case ta.OpAppR(op, ar) => snod(ar) map {tb.App(tb.SubNode(tb.Id(op.id), Synthetic(phaseName, None)/*TODO better md*/), _)} // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
       case ta.OpTerm(op) => tb.Id(op.id) |> lift
-      case _ => ??? // TODO OpApp, Let, etc.
+      //case _ => ??? // TODO OpApp, Let, etc.
     }
     
-//    override def process(x: tb.Let) = super.process(x) match {
-//      case tb.Let(mo, pa, bo, wh) => tb.Let(mo, invert(pa), bo, wh)
-    override def process(x: ta.Let) = x match {
+//    override def process(x: ta.ComStmt) = x match {
+//      case x: ta.Let => 
+//      case _ => super.process(x)
+//    }
+    
+////    override def process(x: tb.Let) = super.process(x) match {
+////      case tb.Let(mo, pa, bo, wh) => tb.Let(mo, invert(pa), bo, wh)
+//    override def process(x: ta.Let) = x match {
+//      case ta.Let(mo, pa, bo, wh) => for {
+//        mo <- mod(mo)
+//        pa <- invert(nod(pa))
+//        bo <- nod(bo)
+//        wh <- Monad.sequence(wh map toanf.process)
+//      } yield tb.Let(mo, pa, bo, wh)
+//    }
+    def let(x: ta.Let): Result[tb.Let * Ls[b.AnyStmt]] = x match {
       case ta.Let(mo, pa, bo, wh) => for {
         mo <- mod(mo)
-        pa <- invert(nod(pa))
+        Result(post, pa2) = invert(nod(pa))
         bo <- nod(bo)
         wh <- Monad.sequence(wh map toanf.process)
-      } yield tb.Let(mo, pa, bo, wh)
+      } yield tb.Let(mo, pa2, bo, wh) -> post
     }
     
     def invert[T](x: Result[T]): Result[T] = x match {

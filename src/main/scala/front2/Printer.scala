@@ -31,10 +31,12 @@ conv =>
     nameCounts: Str ->? Int = ->?.empty
   ) {
     
-    /** */
+    /** Produces a fresh name to display a synthetic identifier. Uses the name hint in the identifier if available.
+      * TODO: generate nice things like _a,_b,_c instead of _tmp0,_tmp1,_tmp2
+      */
     def mkId(syd: SyntheticId): (Document, Ctx) = namedIds get syd map text map (_ -> this) getOrElse {
       val hint = syd.nameHint getOrElse 'tmp match { case Sym(s) => SyntheticMarker+s }
-      val newNum = (nameCounts getOrElse (hint, 0)) + 1
+      val newNum = (nameCounts getOrElse (hint, -1)) + 1
       val name = hint+newNum
       text(name) -> copy(namedIds = namedIds + (syd -> name), nameCounts = nameCounts + (hint -> newNum))
     }
@@ -139,13 +141,13 @@ conv =>
     }
     
     def print(x: ComStmt): Result[Document] = x match {
-      case ta.Let(mo,pa,bo,wh) => for {
+      case Let(mo,pa,bo,wh) => for {
         mo <- printMod(mo)
         pa <- nod(pa)
         bo <- nod(bo)
         wh <- Monad.sequence(wh map conv.process)
       } yield doc"$mo$pa = $bo" // TODO $wh
-      case _ => ???
+      case Impure(n) => nod(n)
     }
     def print(x: ASTStmt): Result[Document] = x match {
       case x: ComStmt => print(x)
@@ -241,7 +243,7 @@ object ASTPrinter extends Printer[AST.type](AST) {
 object DesugaredPrinter extends Printer[Desugared.type](Desugared) {
   import Result._
   
-  def printMod(x: a.Modif): Result[Document] = (if (x.priv) "priv" else "") |> text |> lift
+  def printMod(x: a.Modif): Result[Document] = (if (x.priv) "priv " else "") |> text |> lift
   
   //val tconv: TermsConverter[AST.types.type, Printed.types.type] = new PrinterTermsConverter[a.types.type, b.types.type](AST.types, Printed.types) {
   object tconv extends PrinterTermsConverter[a.types.type, b.types.type](Desugared.types, Printed.types) {
