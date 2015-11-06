@@ -122,7 +122,9 @@ trait Terms extends PrettyPrint {
     //object AST {
       
     case class Lambda(pattern: Node, body: Node) extends ASTTerm
-    case class LambdaCompo(lambdas: Ls[Lambda]) extends ASTTerm
+    case class LambdaCompo(lambdas: Ls[Lambda]) extends ASTTerm {
+      require(lambdas.size > 0)
+    }
     
     case class OpAppL(arg: SubNode, op: Operator) extends ASTTerm
     

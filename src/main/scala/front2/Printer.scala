@@ -134,6 +134,8 @@ conv =>
     
     def print(x: CoreTerm): Result[Document] = x match {
       case x: ComTerm => print(x)
+      case Closure(id, bod) => for (id <- print(Id(id));bod <- nod(bod))
+        yield doc"($id => $bod)" // TODO should use a free-standing function for idents
     }
     
     def print(x: ComStmt): Result[Document] = x match {

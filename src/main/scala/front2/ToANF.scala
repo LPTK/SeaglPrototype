@@ -8,6 +8,7 @@ import Stages2._
 
 /**
   * TODO: properly convert patterns by reversing stmts order and let directions
+  *   TODO: put extracted pattern stmts AFTER the let!!
   * TODO: before ANF, a phase that checks name resolution and lifts or-patterns into proper lambdas
   */
 object ToANF extends StageConverter[AST.type, Desugared.type](AST, Desugared) {
@@ -137,6 +138,8 @@ toanf =>
   abstract class AnfTermsConverter[TA <: a.AST, TB <: b.Core](val _ta: TA, val _tb: TB)
   extends TermsConverter[TA,TB](_ta,_tb) {
     
+    val LambdaCompoId = StableId('std::Nil, Sym("&>"))
+    
     //def blockAsTerm: tb.Block => tb.Term
     
     def nameHint(x: ta.Term): ?[Sym] = None
@@ -175,8 +178,9 @@ toanf =>
       case x: ta.Let =>
         //process(x: ta.ComStmt) flatMap {s => Result(tb.stmt2anyS(s) :: Nil, tb.Literal(()))}
         // eqtly
-        val Result(sts, res) = process(x: ta.ComStmt); Result(sts :+ tb.stmt2anyS(res), tb.Literal(()))
-      case ta.Lambda(id: Ident, bo) => //nod(bo) map {tb.Closure(id, _)}
+        val Result(sts, res) = process(x: ta.ComStmt); Result(sts :+ tb.stmt2anyS(res), () |> tb.Literal.apply)
+      //case ta.Lambda(id: Ident, bo) => //nod(bo) map {tb.Closure(id, _)}
+      case ta.Lambda(ta.Node(ta.Id(id)), bo) =>
         //val Result(sts, ret) = nod(bo)
         (nod(bo) match {
           case Result(Nil, r) => tb.Closure(id, r)
@@ -187,17 +191,45 @@ toanf =>
         val id = new SyntheticId(nameHint(pa.term))
         val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, Some(pa.md)))
         for {
-          pa <- nod(pa)
+          pa <- invert(nod(pa))
           let = tb.Let(Modification(false), pa, idn) |> tb.stmt2anyS //: b.AnyStmt
           //bo <- nod(bo)
           Result(sts, bo2) = nod(bo)
         } yield tb.Closure(id, mkBlock(let :: sts : _*)(bo2))
+      case ta.LambdaCompo(lams) =>
+//        val md = Synthetic(phaseName, None)
+//        for (lams <- Monad.sequence(lams map ast2Core))
+//          yield lams.map{case x: tb.Closure => tb.SubNode(x, md) case _ => wtf}.reduce(tb.App.apply)
+        // Actually, reduce to Apps BEFORE converting!
+        val Nd = ta.Node
+        val apps = lams map Nd reduce {(a,b) => ta.App(ta.App(a, LambdaCompoId |> ta.Id |> Nd) |> Nd, b) |> Nd}
+        ast2Core(apps.term)
       case ta.OpAppL(ar, op) => snod(ar) map {tb.App(_, tb.SubNode(tb.Id(op.id), Synthetic(phaseName, None)/*TODO better md*/))}
       case ta.OpAppR(op, ar) => snod(ar) map {tb.App(tb.SubNode(tb.Id(op.id), Synthetic(phaseName, None)/*TODO better md*/), _)} // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
       case ta.OpTerm(op) => tb.Id(op.id) |> lift
       case _ => ??? // TODO OpApp, Let, etc.
     }
     
+//    override def process(x: tb.Let) = super.process(x) match {
+//      case tb.Let(mo, pa, bo, wh) => tb.Let(mo, invert(pa), bo, wh)
+    override def process(x: ta.Let) = x match {
+      case ta.Let(mo, pa, bo, wh) => for {
+        mo <- mod(mo)
+        pa <- invert(nod(pa))
+        bo <- nod(bo)
+        wh <- Monad.sequence(wh map toanf.process)
+      } yield tb.Let(mo, pa, bo, wh)
+    }
+    
+    def invert[T](x: Result[T]): Result[T] = x match {
+      case Result(genStmts, res) => Result(genStmts map reverse reverse, res)
+    }
+    
+  }
+  def reverse(x: b.AnyStmt): b.AnyStmt = x match {
+    case Left(b.types.Let(mo, pa, bo, wh)) => Left(b.types.Let(mo, bo, pa, wh))
+    case Right(b.values.Let(mo, pa, bo, wh)) => Right(b.values.Let(mo, bo, pa, wh))
+    case _ => x
   }
   
 }
