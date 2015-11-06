@@ -17,6 +17,8 @@ package object doc {
 
   implicit val strLift: Liftable[String] = Liftable[String](text)
 
+  implicit val symLift: Liftable[Symbol] = Liftable[Symbol]{ case Symbol(str) => text(str) }
+
   // /** Lifting document lists with line breaks in between is almost never what the user wants, and leads to errors */
   //  implicit def seqLift[T: Liftable]: Liftable[Seq[T]] = Liftable[Seq[T]] { ls =>
   //    val lift = implicitly[Liftable[T]].apply _

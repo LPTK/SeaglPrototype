@@ -1,4 +1,5 @@
 package object utils {
+  import scala.language.higherKinds
   
   type Bool = Boolean
   val Bool = Boolean
@@ -41,6 +42,9 @@ package object utils {
   
   val Iterate = Iterator // eg, Iterate continually 42 
   
+  object -> {
+    def unapply[A,B](x: (A,B)) = Some(x)
+  }
   
   def wtf = throw new Exception("Unexpected program state reached")
   def wtf(str: => Str) = throw new Exception(s"Unexpected program state reached: $str")
@@ -70,6 +74,7 @@ package object utils {
   
   implicit class GenHelper[A](val __self: A) extends AnyVal {
     def |> [B] (rhs: A => B): B = rhs(__self)
+    /**A lesser precedence one! */ def /> [B] (rhs: A => B): B = rhs(__self)
 //  }
 //  implicit class RightAssocApp[A, B](self: A => B) extends AnyVal {
 //  implicit class AppFun[A](val __self: A) extends AnyVal {
