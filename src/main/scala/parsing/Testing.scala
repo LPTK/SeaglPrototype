@@ -3,7 +3,7 @@ package parsing
 import java.io.PrintStream
 import java.nio.charset.Charset
 
-import front2.ToANF
+import front2.{DesugaredPrinter, ASTPrinter, ToANF}
 
 import scala.io.StdIn._
 
@@ -89,15 +89,24 @@ object ParserREPL extends App {
 //      import simple._
       pgrm match {
         case Parser.Success(pgrm, _) =>
-          val r = try {
+          try {
             //Terms.Block(Nil, (Builder.apply _) <|: pgrm)
-            ToANF.vconv.nod(pgrm).toBlock
+            println(ASTPrinter(pgrm))
+            val anf = ToANF.vconv.nod(pgrm).toBlock
+            //println(anf)
+            DesugaredPrinter(anf) |> println
+            //println(DesugaredPrinter(anf).getClass)
           } catch {
             case common.CompileError(msg) => "Compile Error: "+msg
           }
-          println(r)
         case _ =>
       }
+//      pgrm match {
+//        case Parser.Success(pgrm, _) =>
+//          println(ASTPrinter(pgrm))
+//          println(DesugaredPrinter(pgrm))
+//        case _ =>
+//      }
       
     } catch {
       case Parser.lexical.ParseException(msg) => "Parse error: " + msg

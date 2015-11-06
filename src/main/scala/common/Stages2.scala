@@ -104,16 +104,17 @@ object Stages2 {
   
   object Printed extends Stage2 with Common {
     
-    object types extends DocTerms with ComTypes {
+    object typez extends DocTerms with ComTypes {
       type DualWorld = values.type
       lazy val dualWorld = values
       
       //type Kind = Types.TypeKind
     }
-    
-    object values extends DualTemplate[types.type](types) with DocTerms with ComValues {
+    object valuez extends DualTemplate[types.type](types) with DocTerms with ComValues {
       //type Kind = Type
     }
+    val values = valuez
+    val types = typez
     
     trait DocTerms extends TermsTemplate {
       type DualWorld <: DocTerms

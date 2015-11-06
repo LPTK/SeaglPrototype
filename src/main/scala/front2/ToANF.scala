@@ -23,7 +23,7 @@ toanf =>
    * Both values and types may also generate statements when removing the ModBlock syntactic tree. 
    */
   case class Result[+T](genStmts: Ls[b.AnyStmt], res: T) {
-    def toBlock(implicit ev: T <:< b.values.Node) = b.values.Block(genStmts, res)
+    def toBlock(implicit ev: T <:< b.values.Node) = b.values.Node(b.values.Block(genStmts, res), Synthetic("toplevel", None))
   }
   implicit object Result extends Monad[Result] {
     def lift[A](a: A) = Result(Nil, a)
