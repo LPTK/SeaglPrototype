@@ -48,6 +48,19 @@ object Monad {
     def map[A,B](ma: F[A], f: A => B): F[B] = ma map f
   }
   
+  type State[S, +T] = S => (T, S)
+  implicit def State[S] = new Monad[({type λ[A] = State[S,A]})#λ] {
+    def lift[A](a: A) = (s: S) => (a, s)
+    def map[A,B](ma: F[A], f: A => B) : F[B] = (s: S) => {
+      val (v, ns) = ma(s)
+      (f(v), ns)
+    }
+    def flatMap[A,B](ma: M[A], f: A => M[B]): M[B] = (s: S) => {
+      val (v, ns) = ma(s)
+      f(v)(ns)
+    }
+  }
+  
 //  //def sequence[M[_]: Monad, A](ls: Seq[M[A]]): M[Seq[A]] = {
 //  def sequence[M[_], A](ls: Seq[M[A]])(implicit m: Monad[M]): M[Seq[A]] = {
 //    //val m = implicitly[M[_]]

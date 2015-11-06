@@ -9,6 +9,11 @@ import common._
   *   use Document
   *   auto-parenthesize (use precedence values)
   *   use context to generate fresh ids
+  * 
+  * TODO: make it a StageConverter instead!!
+  *   state monad to pass id generation number
+  * 
+  * 
   */
 trait PrettyPrint {
 //self: Terms# TermsTemplate =>

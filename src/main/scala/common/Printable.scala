@@ -28,6 +28,12 @@ object Printable {
   }
   
   type PrintOptions = Unit
+  case class Ctx(curPrec: Int, genId: Int = 0) {
+    def nextId = {
+      // TODO
+      Ctx(curPrec, genId + 1)
+    }
+  }
   
   type Document = String
   

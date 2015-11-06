@@ -8,8 +8,9 @@ import Stages2._
 
 /**
   * TODO: properly convert patterns by reversing stmts order and let directions
+  * TODO: before ANF, a phase that checks name resolution and lifts or-patterns into proper lambdas
   */
-object ToANF extends StageConverter[AST.type, ANF.type](AST, ANF) {
+object ToANF extends StageConverter[AST.type, Desugared.type](AST, Desugared) {
 toanf =>
   
   val phaseName = "ToANF"
@@ -59,7 +60,7 @@ toanf =>
   def mod(x: a.Modif): Result[b.Modif] = Modification(x contains Priv) |> lift
   
   
-  val tconv: AnfTermsConverter[AST.types.type,ANF.types.type] = new AnfTermsConverter(AST.types, ANF.types) {
+  val tconv: AnfTermsConverter[AST.types.type,Desugared.types.type] = new AnfTermsConverter(AST.types, Desugared.types) {
     val co: vconv.type = vconv
     
     //def blockAsTerm = ??? //identity
@@ -98,7 +99,7 @@ toanf =>
   }
   
   
-  val vconv = new AnfTermsConverter(AST.values, ANF.values) {
+  val vconv = new AnfTermsConverter(AST.values, Desugared.values) {
     val co: tconv.type = tconv
     
     //def blockAsTerm = ??? //identity

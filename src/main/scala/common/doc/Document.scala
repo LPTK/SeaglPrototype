@@ -2,6 +2,9 @@ package common.doc
 
 import java.io.{StringWriter, Writer}
 
+import common.Printable.PrintOptions
+import common.SelfPrintable
+
 case object DocNil extends Document
 case class DocBreak(force: Boolean) extends Document
 case class DocText(txt: String) extends Document {
@@ -19,7 +22,7 @@ case class DocCons(hd: Document, tl: Document) extends Document
  * @author Michel Schinz
  * @author Lionel Parreaux
  */
-abstract class Document {
+abstract class Document extends SelfPrintable { def print(implicit po: PrintOptions) = ??? // TODO rm
   def ::(hd: Document): Document = DocCons(hd, this)
   def :/:(hd: Document): Document = hd :: DocBreak(force = false) :: this
   def :\\:(hd: Document): Document = hd :: DocBreak(force = true) :: this

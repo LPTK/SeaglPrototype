@@ -1,5 +1,6 @@
 package common
 
+import common.doc.Document
 import utils._
 import front2._
 
@@ -79,7 +80,7 @@ object Stages2 {
     
   }
   
-  object ANF extends Stage2 with PretypedStage with ANFStage {
+  object Desugared extends Stage2 with PretypedStage with ANFStage {
     
 //    case class TypeNode(term: Type, md: Origin)
 //    case class ValueNode(term: Value, md: Origin)
@@ -95,7 +96,36 @@ object Stages2 {
 //    
 //  }
   
-
+  object Typed extends Stage2 with ANFStage {
+    
+  }
+  
+  
+  
+  object Printed extends Stage2 with Common {
+    
+    object types extends DocTerms {
+      type DualWorld = values.type
+      lazy val dualWorld = values
+      
+      //type Kind = Types.TypeKind
+    }
+    
+    object values extends DualTemplate[types.type](types) with DocTerms {
+      //type Kind = Type
+    }
+    
+    trait DocTerms extends TermsTemplate with ComTypes {
+      type Node = Document
+      def Node(term: Term, md: Metadata): Node = ???
+      type SubNode = Node
+      def SubNode(term: SubTerm with Term, md: Metadata): SubNode = ???
+    }
+    
+  }
+  
+  
+  
   // Common Stage-related definitions:
 
   trait PretypedStage {
@@ -134,7 +164,7 @@ object Stages2 {
       
       //def stmt2anyS(a: Stmt) = Left(a)
       //def stmt2anyS = Left.apply
-    } 
+    }
     
 //    object values extends TermsTemplate with ANF with ComValues {
 //      type DualWorld = types.type

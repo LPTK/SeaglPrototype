@@ -152,7 +152,11 @@ interpreted as e0 op1 (e1 op2 (...opn en)...).
 │ 
 └> [3.5] parsed: ((((a +) (b c)) +) (d e))
  
- *
+ * 
+ * 
+ * Note: `positioned` does not override positions that are already defined! So we should use it extensively without fear.
+ * TODO: make something that remembers both the start and end of the position?
+ * 
  */
 object Parser extends TokenParsers {
 self =>
@@ -283,7 +287,7 @@ self =>
     )
   
   /** Note: not sure if multiLine param useful */ 
-  def term(multiLine: Bool)(implicit st: State): Parser[Term] = "term" ! positioned( // FIXME: will consume the space into the position?
+  def term(multiLine: Bool)(implicit st: State): Parser[Term] = "term" ! positioned(
     (spacedOpAppLefts() <~ space.?)
   ~ (if (multiLine) newLine ~> indented(block) else nothing).? ^^ {
     case t ~ None => t

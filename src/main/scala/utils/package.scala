@@ -19,6 +19,7 @@ package object utils {
   val So = Some
   val No = None
   type ?[+T] = Option[T]
+  val ? = Option
   
   type Eit[+A,+B] = Either[A,B]
   val Eit = Either
@@ -32,7 +33,9 @@ package object utils {
   
   type -> [-A,+B] = A => B
   type ->? [A,+B] = Map[A,B]
+  val ->? = Map
   type ->* [A,B] = collection.mutable.MultiMap[A,B]
+//  val ->* = collection.mutable.MultiMap 
 //  type ?-> [A,+B] = Map[A,B]
 //  type ?->* [A,B] = collection.mutable.MultiMap[A,B]
   
@@ -60,6 +63,10 @@ package object utils {
     def in[R] (f: (T,T,T) => R) = f(__self,__self,__self)
     
   }
+  
+  
+  type |> [A, B[_]] = B[A]
+  type <| [A[_], B] = A[B]
   
   implicit class GenHelper[A](val __self: A) extends AnyVal {
     def |> [B] (rhs: A => B): B = rhs(__self)

@@ -31,7 +31,7 @@ conv =>
     case Right(vs) => vconv.stmt(vs) map (s => Right(s))
   }
   
-  
+  // TODO: define ValuesConverter and TypesConverter with `co` already set?
   abstract case class TermsConverter[+TA <: a.TermsTemplate, +TB <: b.TermsTemplate](ta: TA, tb: TB) {
     import Result._
     
@@ -44,7 +44,7 @@ conv =>
     
     /** Polymorphic definitions */
   
-    /** Node could be implemented here, but then we'd have to provide a function for Metadata */
+    ///** Node could be implemented here, but then we'd have to provide a function for Metadata */
     def nod(x: ta.Node): Result[tb.Node]
     def snod(x: ta.SubNode): Result[tb.SubNode]
     def kin(x: ta.Kind): Result[tb.Kind]
@@ -70,7 +70,7 @@ conv =>
 //      case x: ta.ASTTerm => process(x)
 //      // CoreTerm
 //      case x: ta.CoreTerm => process(x)
-      case _ => scalasDumb(x)
+        case _ => scalasDumb(x)
     }
     def process(x: ta.SubTerm): Result[tb.SubTerm] = x match {
       //case x: ta.ASTTerm => process(x) // Note: for some reason, putting this case (which cannot happen) makes scalac think the rest is dead code!!
