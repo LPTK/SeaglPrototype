@@ -159,7 +159,17 @@ toanf =>
     
     //def blockAsTerm: tb.Block => tb.Term
     
-    def nameHint(x: ta.Term): ?[Sym] = None
+    def nameHint(x: ta.Term): ?[Sym] = ?(x match {
+      case ta.Id(SyntheticId(Some(sym))) => sym
+      case ta.Id(StableId(_, sym)) => sym
+      case ta.Id(LocalId(sym)) => sym
+      //case ta.App(_,_) | ta.DepApp(_,_) => 'app
+      case ta.App(a,b) => (for{Sym(a) <- nameHint(a.term); Sym(b) <- nameHint(b.term)} yield Sym(a+b)) getOrElse 'app
+      case ta.DepApp(_,_) => 'dapp
+      //case _: ta.Block => 'blk
+      case ta.Block(_, r) => nameHint(r.term) getOrElse 'blk
+      case _ => null
+    })
     
     //def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm]
     
@@ -210,7 +220,7 @@ toanf =>
         }) |> lift
       case ta.Lambda(pa, bo) =>
         // FIXME: what to do with the statements introduced by the pattern??
-        val id = new SyntheticId(nameHint(pa.term))
+        val id = new SyntheticId(Some('arg)) //(nameHint(pa.term))
         val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, Some(pa.md)))
         for {
           pa <- invert(nod(pa))
