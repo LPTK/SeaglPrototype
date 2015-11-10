@@ -35,6 +35,8 @@ scalacOptions += "-language:postfixOps"
 //javaOptions in run += "-Dfile.encoding=UTF-8"
 
 
+mainClass in (Compile, run) := Some("parsing.ParserREPL")
+
 
 
 
