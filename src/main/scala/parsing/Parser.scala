@@ -157,9 +157,12 @@ interpreted as e0 op1 (e1 op2 (...opn en)...).
  * Note: `positioned` does not override positions that are already defined! So we should use it extensively without fear.
  * TODO: make something that remembers both the start and end of the position?
  * 
- * 
  * TODO: x.( ... ) syntax, eg: a.(foo, bar)
  * 
+ * TODO: introduce binary op AST node, as well as a VirtualNode for op cuts (+x-y.z), instead of OpAppR
+ * TODO:   + have a tuple node
+ * 
+ * TODO: records
  *  
  */
 object Parser extends TokenParsers {
@@ -212,7 +215,7 @@ self =>
   def pgrm = phrase(block(0) <~ emptyLines)
 
   /** Block of code indented at `ind` */
-  def block(ind: Int): Parser[Term] = "block" ! positioned(indentedLines(ind, genTerm(State(ind, false))) ^^ Block.apply)
+  def block(ind: Int): Parser[Term] = "block" ! positioned(indentedLines(ind, genTerm(true)(State(ind, false))) ^^ Block.apply)
   
   def indentedLines[T](ind: Int, p: Parser[T]): Parser[List[T]] = 
     (emptyLines ~> atIndent(ind) ~> p) ~ rep(newLine ~> emptyLines ~> atIndent(ind) ~> p) ^^ mk(_ :: _) /*{
@@ -230,7 +233,7 @@ self =>
   )
   
   def lambdaBranch(implicit st: State): Parser[(Term, Term)] =
-    (term(false) <~ air("=>")) ~ genTerm(st) ^^ mk(_ -> _) //{case(a~b) => (a,b)}
+    (term(false) <~ air("=>")) ~ genTerm(false)(st) ^^ mk(_ -> _) //{case(a~b) => (a,b)}
   
   def atIndent(ind: Int): Parser[Unit] =
     space.? ^? ({ case Some(n) if n == ind =>  case None if ind == 0 => }, _ => "wrong indent")
@@ -272,9 +275,9 @@ self =>
   | atom ^^ Id
   | acceptMatch("string litteral", {case StrLit(str) => Literal(str)})
   | acceptMatch("int litteral", {case IntLit(n) => Literal(n)})
-  | "(" ~ ")" ^^^ Literal(())
-  | ("(" ~> air(genTerm(State(st.ind, false))) <~ ")") // TODOnot ( + newline ... <- actually it's nice NOT to support it
-  | ("(" ~> air(operator) ~ genTerm(State(0, false)).? <~ space.? <~ ")") ^^ {
+  | "(" ~ ")" ^^^ () /> Literal
+  | ("(" ~> air(genTerm(true)(State(st.ind, false))) <~ ")") // TODOnot ( + newline ... <- actually it's nice NOT to support it
+  | ("(" ~> air(operator) ~ genTerm(true)(State(0, false)).? <~ space.? <~ ")") ^^ {
       case op ~ None => OpTerm(op)
       case op ~ Some(t) => OpAppR(op, t)
     }
@@ -298,12 +301,12 @@ self =>
     case t1 ~ Some(t2) => App(t1, t2)
   })
   
-  def genTerm(implicit st: State, trailingOp: Bool = false): Parser[Term] =
+  def genTerm(allowOr: Bool = true)(implicit st: State, trailingOp: Bool = false): Parser[Term] =
 //    rep1sep(genTermWithoutSemi, air(";")) ^^ Block.apply
-      positioned(rep(genTermWithoutSemi(false) <~ air(";")) ~ genTermWithoutSemi(true) ^^ mk((ls,t) => Block(ls :+ t))) //{ case ls ~ t => Block(ls :+ t) }
+      positioned(rep(genTermWithoutSemi(false,true) <~ air(";")) ~ genTermWithoutSemi(true,allowOr) ^^ mk((ls,t) => Block(ls :+ t))) //{ case ls ~ t => Block(ls :+ t) }
   
   /** genTerm adds to term: lambdas, newline ops, newline blocks */
-  def genTermWithoutSemi(multiLine: Bool)(implicit st: State, trailingOp: Bool = false): Parser[Term] = "genTerm" !! positioned(rep1sep(
+  def genTermWithoutSemi(multiLine: Bool, allowOr: Bool)(implicit st: State, trailingOp: Bool = false): Parser[Term] = "genTerm" !! positioned(rep1sep(
     lambda
   | "nl op" ! (if (multiLine) (
         (term(true) <~ newLine) ~ indented(opBlock, strict = false)
@@ -315,19 +318,22 @@ self =>
       }
     } else nothing)
   | let
-  | term(multiLine)
+  //| term(multiLine) ~ (air("|") ~> term(multiLine)) ^^ { case a ~ b => App(OpAppL(a,SymbolOperator("|")),b) }
+  //| term(multiLine)
+  | (if (allowOr) rep1sep(term(multiLine), air("|")) ^^ { ls => ls.reduce{(a,b)=>App(OpAppL(a,SymbolOperator("|")),b)} }
+     else term(multiLine))
   | newLine ~> indented(block, !trailingOp)
   , space.?) <~ space.? ^^ { _ reduceLeft App })
   
   def opBlock(n: Int)(implicit st: State) = "opBlock" !! 
-    rep1sep((atIndent(n) ~> rep1(air(operator)) <~ space.?) ~ genTerm(State(n+1, false), true).?, newLine)
+    rep1sep((atIndent(n) ~> rep1(air(operator)) <~ space.?) ~ genTerm(true)(State(n+1, false),true).?, newLine)
   
 //  def stmt(implicit st: State): Parser[Stmt] = "stmt" ! (rep1sep(let | genTerm, air(";")) ^^ {
 //    case stmt :: Nil => stmt
 //    case ls => Block(ls)
 //  })
   
-  def binding(implicit st: State): Parser[Term ~ Term] = (spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi(true)
+  def binding(implicit st: State): Parser[Term ~ Term] = (spacedOpAppLefts() <~ air("=")) ~ genTermWithoutSemi(true,true)
   
   def modification = (modifier <~ space.?).*
   

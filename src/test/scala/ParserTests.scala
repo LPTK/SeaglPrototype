@@ -15,14 +15,15 @@ import ASTProxy._
  * 
  */
 class ParserTests extends FlatSpec with ShouldMatchers {
+  import scala.language.implicitConversions
   
   implicit def sym2str(s: Sym): Str = s match { case Sym(str) => str }
   implicit def sym2id(s: Sym): Term = s match { case Sym(str) => Id(str) }
   
 //  val plus = Parser.lexical.SymbolOperator("+")
 //  val minus = Parser.lexical.SymbolOperator("-")
-  val List(plus, minus, times, gt, qmark, comma) =
-    List("+", "-", "*", ">", "?", ",") map Parser.lexical.SymbolOperator
+  val List(plus, minus, times, gt, qmark, comma, or) =
+    List("+", "-", "*", ">", "?", ",", "|") map Parser.lexical.SymbolOperator
   
   val List(foo, bar, map, els) = List("foo", "bar", "map", "else") map Parser.lexical.MethodOperator
   
@@ -130,7 +131,9 @@ class ParserTests extends FlatSpec with ShouldMatchers {
     Seq("a + b", "a+ b", "a+b", "a\n +b", "a\n + b") -> App(OpAppL('a, plus), 'b),
     Seq("a .foo b", "a.foo b", "a.foo(b)", "(a.foo) b", "(a .foo)b") -> App(OpAppL('a, foo), 'b),
   
-    Seq("a+b+c", "a+b + c", "a + b + c") -> apb_pc
+    Seq("a+b+c", "a+b + c", "a + b + c") -> apb_pc,
+    
+    Seq("a|b|c", "a | b | c") -> bin(bin('a,or,'b),or,'c) //bin('a,or,bin('b,or,'c))
     
   )
   
@@ -205,6 +208,10 @@ a
     Seq("a => b", "a =>\n  b") -> Lambda('a.id -> 'b.id),
   
     Seq("a => b | c => d" /*, "| a => b | c => d"*/) -> Lambda('a.id -> 'b.id, 'c.id -> 'd.id),
+    
+    Seq("(a | b) => (c | d)") -> Lambda(bin('a,or,'b) -> bin('c,or,'d)),
+    
+    Seq("(a | b) => (c | d) | c => d") -> Lambda(bin('a,or,'b) -> bin('c,or,'d), 'c.id -> 'd.id),
     
     Seq("a(b => c)", "a\n  b => c") -> App('a, Lambda('b.id -> 'c.id)),
   
