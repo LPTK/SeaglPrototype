@@ -10,6 +10,9 @@ import Stages2._
   * TODO: properly convert patterns by reversing stmts order and let directions
   *   TODO: put extracted pattern stmts AFTER the let!!
   * TODO: before ANF, a phase that checks name resolution and lifts or-patterns into proper lambdas
+  * 
+  * TODO: make tests for this class!!
+  * 
   */
 object ToANF extends StageConverter[AST.type, Desugared.type](AST, Desugared) {
 toanf =>
@@ -222,12 +225,16 @@ toanf =>
         // FIXME: what to do with the statements introduced by the pattern??
         val id = new SyntheticId(Some('arg)) //(nameHint(pa.term))
         val idn = tb.Node(tb.Id(id): tb.Term, Synthetic(phaseName, Some(pa.md)))
-        for {
-          pa <- invert(nod(pa))
-          let = tb.Let(Modification(false), pa, idn) |> tb.stmt2anyS //: b.AnyStmt
-          //bo <- nod(bo)
-          Result(sts, bo2) = nod(bo)
-        } yield tb.Closure(id, mkBlock(let :: sts : _*)(bo2))
+        //for {
+        //  pa <- invert(nod(pa))
+        //  let = tb.Let(Modification(false), pa, idn) |> tb.stmt2anyS //: b.AnyStmt
+        //  //bo <- nod(bo)
+        //  Result(sts, bo2) = nod(bo)
+        //} yield tb.Closure(id, mkBlock(let :: sts : _*)(bo2))
+        val Result(post, pa2) = invert(nod(pa))
+        val let = tb.Let(Modification(false), pa2, idn) |> tb.stmt2anyS
+        val Result(sts, bo2) = nod(bo)
+        tb.Closure(id, mkBlock(let :: (sts ++ post) : _*)(bo2)) |> lift
       case ta.LambdaCompo(lams) =>
 //        val md = Synthetic(phaseName, None)
 //        for (lams <- Monad.sequence(lams map ast2Core))
