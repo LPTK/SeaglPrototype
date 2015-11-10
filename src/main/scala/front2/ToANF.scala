@@ -206,14 +206,17 @@ toanf =>
     def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm] = x match {
       case ta.Block(sts, ret) =>
         val Result(pre, sts2) = Monad.sequence(sts map toanf.process)
-        nod(ret) map {tb.Block(pre ++ sts2, _)}
+        //nod(ret) map {tb.Block(pre ++ sts2, _)}
+        val Result(rsts, r) = nod(ret)
+        tb.Block(pre ++ sts2 ++ rsts, r) |> lift
         //???
       case x: ta.ComTerm => process(x)
       case x: ta.Let =>
         //process(x: ta.ComStmt) flatMap {s => Result(tb.stmt2anyS(s) :: Nil, tb.Literal(()))}
         // eqtly
         //val Result(sts, res) = process(x: ta.ComStmt); Result(sts :+ tb.stmt2anyS(res), () |> tb.Literal.apply)
-        val Result(sts, (res, post)) = let(x); Result((sts :+ tb.stmt2anyS(res)) ++ post, () |> tb.Literal.apply)
+        val Result(sts, (res, post)) = let(x)
+        Result((sts :+ tb.stmt2anyS(res)) ++ post, () |> tb.Literal.apply)
       //case ta.Lambda(id: Ident, bo) => //nod(bo) map {tb.Closure(id, _)}
       case ta.Lambda(ta.Node(ta.Id(id)), bo) =>
         //val Result(sts, ret) = nod(bo)
