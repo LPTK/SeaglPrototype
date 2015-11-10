@@ -155,24 +155,38 @@ toanf =>
   
   
   //abstract class AnfTermsConverter[TA <: a.TermsTemplate, TB <: b.TermsTemplate { type Term = TB# CoreTerm }](val _ta: TA, val _tb: TB)
-  abstract class AnfTermsConverter[TA <: a.AST, TB <: b.Core](val ta: TA, val tb: TB) extends TermsConverter[TA,TB] { //(_ta,_tb) {
+  abstract case class AnfTermsConverter[TA <: a.AST, TB <: b.Core](ta: TA, tb: TB) extends TermsConverter[TA,TB] { //(_ta,_tb) {
   //trait AnfTermsConverter[TA <: a.AST, TB <: b.Core] extends TermsConverter[TA,TB] { //(_ta,_tb) {
     
     val LambdaCompoId = StableId('std::Nil, Sym("&>"))
     
     //def blockAsTerm: tb.Block => tb.Term
     
-    def nameHint(x: ta.Term): ?[Sym] = ?(x match {
-      case ta.Id(SyntheticId(Some(sym))) => sym
-      case ta.Id(StableId(_, sym)) => sym
-      case ta.Id(LocalId(sym)) => sym
-      //case ta.App(_,_) | ta.DepApp(_,_) => 'app
-      case ta.App(a,b) => (for{Sym(a) <- nameHint(a.term); Sym(b) <- nameHint(b.term)} yield Sym(a+b)) getOrElse 'app
-      case ta.DepApp(_,_) => 'dapp
-      //case _: ta.Block => 'blk
-      case ta.Block(_, r) => nameHint(r.term) getOrElse 'blk
-      case _ => null
-    })
+    def nameHint(x: ta.Term): ?[Sym] = {
+      val maxLen = 5
+      def combine(a: Str, b: Str) = Sym(a.take(maxLen - b.length.min(maxLen/2)) + b) //(b take 2))
+      ?(x match {
+        case ta.UnitLit => 'unit
+        case x: ta.IntLit => 'n
+        case x: ta.RatLit => 'x
+        case x: ta.CharLit => 'c
+        case x: ta.StrLit => 'str
+        case ta.Id(SyntheticId(Some(sym))) => sym
+        case ta.Id(StableId(_, sym)) => sym
+        case ta.Id(LocalId(sym)) => sym
+        //case ta.App(_,_) | ta.DepApp(_,_) => 'app
+        //case ta.App(a,_) => nameHint(a.term) match {case Some(Sym(s)) => Sym(s.take(maxLen-2)+"ap") case None => 'app }
+        case ta.App(a,b) => (
+          for{Sym(a) <- nameHint(a.term); Sym(b) <- nameHint(b.term)} yield combine(a,b)
+        ) getOrElse 'app
+        case ta.DepApp(_,_) => 'dapp
+        case ta.OpAppL(a,_) => nameHint(a.term) getOrElse null
+        case ta.OpAppR(_,a) => nameHint(a.term) getOrElse null
+        //case _: ta.Block => 'blk
+        case ta.Block(_, r) => nameHint(r.term) getOrElse 'blk
+        case _ => null
+      }) map { case Sym(str) => Sym(str take maxLen) }
+    }
     
     //def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm]
     
