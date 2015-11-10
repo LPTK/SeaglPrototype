@@ -157,6 +157,10 @@ interpreted as e0 op1 (e1 op2 (...opn en)...).
  * Note: `positioned` does not override positions that are already defined! So we should use it extensively without fear.
  * TODO: make something that remembers both the start and end of the position?
  * 
+ * 
+ * TODO: x.( ... ) syntax, eg: a.(foo, bar)
+ * 
+ *  
  */
 object Parser extends TokenParsers {
 self =>

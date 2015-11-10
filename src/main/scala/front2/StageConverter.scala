@@ -31,15 +31,34 @@ conv =>
     case Right(vs) => vconv.stmt(vs) map (s => Right(s))
   }
   
+  abstract case class TermsConverterClass[+TA <: a.TermsTemplate, +TB <: b.TermsTemplate](ta: TA, tb: TB) extends TermsConverter[TA,TB] {
+  }
+  
+  trait TypeConverter {
+    val self = Left(tconv): tconv.type | vconv.type
+  }
+  trait ValueConverter {
+    val self = Right(vconv): tconv.type | vconv.type
+  }
+  
   // TODO: define ValuesConverter and TypesConverter with `co` already set?
-  abstract case class TermsConverter[+TA <: a.TermsTemplate, +TB <: b.TermsTemplate](ta: TA, tb: TB) {
+  trait TermsConverter[+TA <: a.TermsTemplate, +TB <: b.TermsTemplate] {
     import Result._
+    
+    val ta: TA
+    val tb: TB
     
     
     /** Dual Terms Converter */
     
-    val co: TermsConverter[ta.dualWorld.type, tb.dualWorld.type]
-    //val co: TermsConverter[ta.DualWorld, tb.DualWorld]
+    //val co: TermsConverter[ta.dualWorld.type, tb.dualWorld.type]
+    ////val co: TermsConverter[ta.DualWorld, tb.DualWorld]
+    /** Should return Left(this) or Right(this);  (tconv.type with this.type) does not work */
+    //val lol: (this.type =:= tconv.type) | (this.type =:= vconv.type)
+    val self: tconv.type | vconv.type //= ???
+    val co: TermsConverter[ta.dualWorld.type, tb.dualWorld.type] =
+      (self match { case Left(`tconv`) => vconv  case Right(`vconv`) => tconv })
+      .asInstanceOf[TermsConverter[ta.dualWorld.type, tb.dualWorld.type]]
     
     
     /** Polymorphic definitions */

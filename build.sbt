@@ -23,7 +23,7 @@ scalacOptions += "-language:postfixOps"
 
 scalacOptions += "-language:postfixOps"
 
-scalacOptions ++= Seq("-Ypatmat-exhaust-depth", "40")
+//scalacOptions ++= Seq("-Ypatmat-exhaust-depth", "40")
 
 
 // Wanted nice Unicode (extended ASCII) characters when doing `sbt run`, but this messes up the REPL feedback beyond:

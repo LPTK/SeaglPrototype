@@ -72,8 +72,11 @@ toanf =>
   def mod(x: a.Modif): Result[b.Modif] = Modification(x contains Priv) |> lift
   
   
-  val tconv: AnfTermsConverter[AST.types.type,Desugared.types.type] = new AnfTermsConverter(AST.types, Desugared.types) {
-    val co: vconv.type = vconv
+  //val tconv: AnfTermsConverter[AST.types.type,Desugared.types.type] = new AnfTermsConverter(AST.types, Desugared.types) with TypeConverter {
+  //object tconv extends AnfTermsConverter[AST.types.type,Desugared.types.type] with TypeConverter {
+  //  val (ta,tb) = (AST.types, Desugared.types)
+  object tconv extends AnfTermsConverter(AST.types, Desugared.types) with TypeConverter {
+    //val co: vconv.type = vconv
     
     //def blockAsTerm = ??? //identity
     
@@ -111,8 +114,11 @@ toanf =>
   }
   
   
-  val vconv = new AnfTermsConverter(AST.values, Desugared.values) {
-    val co: tconv.type = tconv
+  //val vconv = new AnfTermsConverter(AST.values, Desugared.values) with ValueConverter {
+  //object vconv extends AnfTermsConverter[AST.values.type,Desugared.values.type] with ValueConverter {
+  //  val (ta,tb) = (AST.values, Desugared.values)
+  object vconv extends AnfTermsConverter(AST.values, Desugared.values) with ValueConverter {
+    //val co: tconv.type = tconv
     
     //def blockAsTerm = ??? //identity
     
@@ -146,8 +152,8 @@ toanf =>
   
   
   //abstract class AnfTermsConverter[TA <: a.TermsTemplate, TB <: b.TermsTemplate { type Term = TB# CoreTerm }](val _ta: TA, val _tb: TB)
-  abstract class AnfTermsConverter[TA <: a.AST, TB <: b.Core](val _ta: TA, val _tb: TB)
-  extends TermsConverter[TA,TB](_ta,_tb) {
+  abstract class AnfTermsConverter[TA <: a.AST, TB <: b.Core](val ta: TA, val tb: TB) extends TermsConverter[TA,TB] { //(_ta,_tb) {
+  //trait AnfTermsConverter[TA <: a.AST, TB <: b.Core] extends TermsConverter[TA,TB] { //(_ta,_tb) {
     
     val LambdaCompoId = StableId('std::Nil, Sym("&>"))
     

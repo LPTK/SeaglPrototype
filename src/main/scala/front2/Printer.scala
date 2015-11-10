@@ -36,8 +36,8 @@ conv =>
       */
     def mkId(syd: SyntheticId): (Document, Ctx) = namedIds get syd map text map (_ -> this) getOrElse {
       val hint = syd.nameHint getOrElse 'tmp match { case Sym(s) => SyntheticMarker+s }
-      val newNum = (nameCounts getOrElse (hint, -1)) + 1
-      val name = hint+newNum
+      val newNum = (nameCounts getOrElse (hint, -2)) + 1
+      val name = hint + (if (newNum < 0) "" else newNum)
       text(name) -> copy(namedIds = namedIds + (syd -> name), nameCounts = nameCounts + (hint -> newNum))
     }
     
@@ -69,8 +69,8 @@ conv =>
   
   
   //abstract class AnfTermsConverter[TA <: a.TermsTemplate](val _ta: TA) extends TermsConverter[TA,Printed.values.type](_ta,Printed.values) {
-  abstract class PrinterTermsConverter[+TA <: a.TermsTemplate, +TB <: Printed.DocTerms](val _ta: TA, val _tb: TB)
-  extends TermsConverter[TA,TB](_ta,_tb) {
+  abstract class PrinterTermsConverter[+TA <: a.TermsTemplate, +TB <: Printed.DocTerms](val ta: TA, val tb: TB)
+  extends TermsConverter[TA,TB] { //(_ta,_tb) {
     import ta._
     
     def print(x: Kind): Result[Document]
@@ -190,9 +190,13 @@ object ASTPrinter extends Printer[AST.type](AST) {
   
   
   //val tconv: TermsConverter[AST.types.type, Printed.types.type] = new PrinterTermsConverter[a.types.type, b.types.type](AST.types, Printed.types) {
-  object tconv extends PrinterTermsConverter[a.types.type, b.types.type](AST.types, Printed.types) {
+  object tconv extends PrinterTermsConverter[a.types.type, b.types.type](AST.types, Printed.types) with TypeConverter {
     import ta._
-    val co: vconv.type = vconv
+    //val co: vconv.type = vconv
+    //val self: tconv.type = tconv
+    //val self = Left(tconv: tconv.type)
+    //val self: tconv.type | vconv.type = Left(this)
+    //val lol = Left(implicitly[this.type =:= tconv.type])
     
     def nod(x: Node): Result[tb.Node] = print(x.term)
     def snod(x: SubNode): Result[tb.SubNode] = print(x.term)
@@ -208,9 +212,9 @@ object ASTPrinter extends Printer[AST.type](AST) {
   }
   
   //val vconv = new PrinterTermsConverter[a.values.type, b.values.type](AST.values, Printed.values) {
-  object vconv extends PrinterTermsConverter[a.values.type, b.values.type](AST.values, Printed.values) {
+  object vconv extends PrinterTermsConverter[a.values.type, b.values.type](AST.values, Printed.values) with ValueConverter {
     import ta._
-    val co: tconv.type = tconv
+    //val co: tconv.type = tconv
     
     def nod(x: Node): Result[tb.Node] = print(x.term)
     def snod(x: SubNode): Result[tb.SubNode] = print(x.term)
@@ -246,9 +250,9 @@ object DesugaredPrinter extends Printer[Desugared.type](Desugared) {
   def printMod(x: a.Modif): Result[Document] = (if (x.priv) "priv " else "") |> text |> lift
   
   //val tconv: TermsConverter[AST.types.type, Printed.types.type] = new PrinterTermsConverter[a.types.type, b.types.type](AST.types, Printed.types) {
-  object tconv extends PrinterTermsConverter[a.types.type, b.types.type](Desugared.types, Printed.types) {
+  object tconv extends PrinterTermsConverter[a.types.type, b.types.type](Desugared.types, Printed.types) with TypeConverter {
     import ta._
-    val co: vconv.type = vconv
+    //val co: vconv.type = vconv
     
     def nod(x: Node): Result[tb.Node] = print(x.term)
     def snod(x: SubNode): Result[tb.SubNode] = print(x.term)
@@ -264,9 +268,9 @@ object DesugaredPrinter extends Printer[Desugared.type](Desugared) {
   }
   
   //val vconv = new PrinterTermsConverter[a.values.type, b.values.type](AST.values, Printed.values) {
-  object vconv extends PrinterTermsConverter[a.values.type, b.values.type](Desugared.values, Printed.values) {
+  object vconv extends PrinterTermsConverter[a.values.type, b.values.type](Desugared.values, Printed.values) with ValueConverter {
     import ta._
-    val co: tconv.type = tconv
+    //val co: tconv.type = tconv
     
     def nod(x: Node): Result[tb.Node] = print(x.term)
     def snod(x: SubNode): Result[tb.SubNode] = print(x.term)
