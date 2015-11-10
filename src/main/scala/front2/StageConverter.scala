@@ -56,8 +56,9 @@ conv =>
     /** Should return Left(this) or Right(this);  (tconv.type with this.type) does not work */
     //val lol: (this.type =:= tconv.type) | (this.type =:= vconv.type)
     val self: tconv.type | vconv.type //= ???
-    val co: TermsConverter[ta.dualWorld.type, tb.dualWorld.type] =
-      (self match { case Left(`tconv`) => vconv  case Right(`vconv`) => tconv })
+    lazy val co: TermsConverter[ta.dualWorld.type, tb.dualWorld.type] =
+      //(self match { case Left(`tconv`) => vconv  case Right(`vconv`) => tconv })
+      (self match { case Left(_) => vconv  case Right(_) => tconv })
       .asInstanceOf[TermsConverter[ta.dualWorld.type, tb.dualWorld.type]]
     
     
