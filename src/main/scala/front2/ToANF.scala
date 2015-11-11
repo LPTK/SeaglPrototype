@@ -247,12 +247,13 @@ toanf =>
         //  pa <- invert(nod(pa))
         //  let = tb.Let(Modification(false), pa, idn) |> tb.stmt2anyS //: b.AnyStmt
         //  //bo <- nod(bo)
-        //  Result(sts, bo2) = nod(bo)
-        //} yield tb.Closure(id, mkBlock(let :: sts : _*)(bo2))
-        val Result(post, pa2) = invert(nod(pa))
-        val let = tb.Let(Modification(false), pa2, idn) |> tb.stmt2anyS
-        val Result(sts, bo2) = nod(bo)
-        tb.Closure(id, mkBlock(let :: (sts ++ post) : _*)(bo2)) |> lift
+        //  Result(boSts, bo2) = nod(bo)
+        //} yield tb.Closure(id, mkBlock(let :: boSts : _*)(bo2))
+        val Result(paSts, pa_) = invert(nod(pa))
+        val let = tb.Let(Modification(false), pa_, idn) |> tb.stmt2anyS
+        val Result(boSts, bo_) = nod(bo)
+        /** In a lambda, we have to first extract the sub-patterns (into paSts) and then only can we construct the body's subexprs (boSts) */
+        tb.Closure(id, mkBlock(let :: (paSts ++ boSts) : _*)(bo_)) |> lift
       case ta.LambdaCompo(lams) =>
 //        val md = Synthetic(phaseName, None)
 //        for (lams <- Monad.sequence(lams map ast2Core))
