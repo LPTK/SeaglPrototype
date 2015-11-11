@@ -98,10 +98,11 @@ class Lexer extends Lexical {
   )
   
   /** Characters in operators */
-  def opChar = elem("opchar", ch => !ch.isLetterOrDigit && !(keychars + ' ' + '\n' + '\r')(ch))
+  def opChar = elem("opchar", ch => !ch.isLetterOrDigit && !(keychars + ' ' + '\n' + '\r' + '_')(ch))
   def genOpChar = opChar | '=' | '|'
-
-  def ident = letter ~ (letter | digit).* ~ rep(''') ^^ { case l ~ chs ~ primes => (l :: chs) ++ primes mkString "" }
+  
+  def idLetter = letter | '_'
+  def ident = idLetter ~ (idLetter | digit).* ~ rep(''') ^^ { case l ~ chs ~ primes => (l :: chs) ++ primes mkString "" }
   
 //  def error[T](p: Parser[T], msg: Str) = p ~ Parser(in => Error(msg, in)) ^^ (_ => ???)
   def error[T](p: Parser[T], msg: Str) = p ^^ (_ => throw ParseException(msg))
