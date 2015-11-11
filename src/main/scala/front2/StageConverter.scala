@@ -98,7 +98,9 @@ conv =>
       case _ => scalasDumb(x)
     }
     def process(x: ta.ASTTerm): Result[tb.ASTTerm] = x match {
-      case ta.Lambda(pa, bo) => for(pa <- nod(pa); bo <- nod(bo)) yield tb.Lambda(pa,bo)
+      //case ta.Lambda(pa, bo) => for(pa <- nod(pa); bo <- nod(bo)) yield tb.Lambda(pa,bo)
+      case lam: ta.Lambda => process(lam)
+      case ta.LambdaCompo(alts) => for (alts <- Monad.sequence(alts map process)) yield tb.LambdaCompo(alts)  
       case ta.OpAppL(ar, op) => snod(ar) map {tb.OpAppL(_, op)}
       case ta.OpAppR(op, ar) => snod(ar) map {tb.OpAppR(op, _)}
       case ta.OpTerm(op) => tb.OpTerm(op) |> lift
@@ -120,6 +122,10 @@ conv =>
         bo <- nod(bo)
         wh <- Monad.sequence(wh map conv.process)
       } yield tb.Let(mo,pa,bo,wh)
+    }
+    
+    def process(x: ta.Lambda): Result[tb.Lambda] = x match {
+      case ta.Lambda(pa, bo) => for(pa <- nod(pa); bo <- nod(bo)) yield tb.Lambda(pa,bo)
     }
     
     def process(x: ta.ComStmt): Result[tb.ComStmt] = x match {

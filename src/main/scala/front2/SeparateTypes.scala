@@ -40,7 +40,7 @@ object SeparateTypes extends SameStageConverterClass[AST.type](AST) with Transfo
     
     def nod(x: ta.Node): Result[tb.Node] = tb.Node(process(x.term)).setPos(x.pos)
     def snod(x: ta.SubNode): Result[tb.SubNode] = nod(x)
-    def kin(x: ta.Kind): Result[tb.Kind] = x // TODO
+    def kin(x: ta.Kind): Result[tb.Kind] = x
     
     def stmt(x: ta.Stmt) = process(x)
     
