@@ -118,7 +118,7 @@ conv =>
       case Block(stmts, ret) => for { stmts <- Monad.sequence(stmts map conv.print); ret <- nod(ret) }
         yield "{ " :: ((stmts :+ ret) mkDocument "; ") :: " }"
       case Ascribe(v, k) => for(v <- snod(v); k <- print(k))
-        yield doc"$v : $k"
+        yield doc"($v: $k)"
     }
     
     def print(x: ASTTerm): Result[Document] = x match {
@@ -277,7 +277,8 @@ object DesugaredPrinter extends Printer[Desugared.type](Desugared) {
     def kin(x: Kind): Result[tb.Kind] = print(x)
     def stmt(x: Stmt): Result[tb.Stmt] = ???
     
-    def print(x: Kind) = ???
+    //def print(x: Kind) = tconv.print(x: Desugared.types.Node)
+    def print(x: Kind): Result[Document] = tconv.print(x.term)
     
     def printStmt(x: Stmt): Result[Document] = print(x)
     

@@ -6,7 +6,7 @@ import common._
 import Stages2._
 
 
-object SeparateTypes extends SameStageConverter[AST.type](AST) with Transformer {
+object SeparateTypes extends SameStageConverterClass[AST.type](AST) with Transformer {
   import Result._
   
 //  def tstmt(x: a.TypeStmt): Result[b.TypeStmt] = tconv.process(x)
@@ -30,7 +30,8 @@ object SeparateTypes extends SameStageConverter[AST.type](AST) with Transformer 
     //def mod(x: ta.Modif): Result[tb.Modif] = x
   }
   //val vconv: TermsConverter[a.valuez.type,b.valuez.type] = new TermsConverter[a.valuez.type,b.valuez.type](AST.valuez, AST.valuez) {
-  object vconv extends TermsConverterClass[a.valuez.type,b.valuez.type](AST.valuez, AST.valuez) with ValueConverter {
+  //object vconv extends TermsConverterClass[a.valuez.type,b.valuez.type](AST.valuez, AST.valuez) with ValueConverter {
+  object vconv extends TermsConverterClass[a.values.type,b.values.type](AST.values, AST.values) with ValueConverter {
     
     //val co: TermsConverter[ta.dualWorld.type, tb.dualWorld.type] = tconv
     //val co: TermsConverter[AST.typez.type, AST.typez.type] = tconv
@@ -43,6 +44,18 @@ object SeparateTypes extends SameStageConverter[AST.type](AST) with Transformer 
     
     def stmt(x: ta.Stmt) = process(x)
     
+    import ta._
+    
+    //override def process(x: ta.ASTTerm) = x match {
+    //  case ta.OpAppL  
+    //}
+    override def process(x: ComTerm) = x match {
+      case App(Node(OpAppL(x, SymbolOperator(":"))), y) =>
+        // Nota: not completely sure this is safe to do (don't they have an outer pointer?) -- but it avoids retraversing all the nodes
+        tb.Ascribe(snod(x), tconv.nod(y.asInstanceOf[a.types.Node]) : AST.types.Node) //: tb.Kind)
+      case _ => super.process(x)
+    }
+    
     //def mod(x: ta.Modif): Result[tb.Modif] = x
     
   }
@@ -50,3 +63,9 @@ object SeparateTypes extends SameStageConverter[AST.type](AST) with Transformer 
   
   
 }
+
+
+
+
+
+

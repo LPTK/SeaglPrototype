@@ -125,7 +125,8 @@ toanf =>
     
     //def blockAsTerm = ??? //identity
     
-    def kin(x: ta.Kind): Result[tb.Kind] = tconv.ast2Core(x)
+    //def kin(x: ta.Kind): Result[tb.Kind] = tconv.ast2Core(x)
+    def kin(x: ta.Kind): Result[tb.Kind] = tconv.nod(x)
     
     def nod(x: ta.Node): Result[tb.Node] = ast2Core(x.term) map {tb.Node(_, x.md)}
     

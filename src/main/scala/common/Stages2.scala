@@ -70,7 +70,8 @@ object Stages2 {
 //      val dualWorld = types
     object valuez extends DualTemplate[types.type](types) with AST with ComValues {
       
-      type Kind = Type
+      //type Kind = Type
+      type Kind = types.Node  
       
       //def stmt2anyS(a: Stmt) = Right(a)
       //def stmt2anyS = Right.apply
@@ -124,6 +125,8 @@ object Stages2 {
       type SubNode = Node
       def SubNode(term: SubTerm with Term, md: Metadata): SubNode = ???
       
+      type Kind = Document
+      
       type Stmt = Nothing
     }
     
@@ -176,7 +179,8 @@ object Stages2 {
 //      val dualWorld = types
     object values extends DualTemplate[types.type](types) with ANF with ComValues {
       
-      type Kind = Type
+      //type Kind = Type
+      type Kind = types.Node
       
       //def stmt2anyS(a: Stmt) = Right(a)
       //def stmt2anyS = Right.apply

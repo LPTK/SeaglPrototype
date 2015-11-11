@@ -201,7 +201,7 @@ self =>
     case op: Operator => op
   })
   def operatorAtLevel(lvl: Int, spaced: Bool = false): Parser[Operator] = operator ^? ({
-    case op: MethodOperator if spaced && lvl == precedenceLevels.head => op
+    case op: MethodOperator if spaced && lvl == spacedMethodsPrecedence => op //precedenceLevels.head => op
     case op: MethodOperator if !spaced && op.precedence == lvl => op
     case op: SymbolOperator if op.precedence == lvl && (spaced || op.sticking) => op
   }, op => s"Wrong precedence for $op")

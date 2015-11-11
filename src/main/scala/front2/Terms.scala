@@ -104,6 +104,7 @@ trait Terms extends PrettyPrint {
     
     case class Block(stmts: Ls[AnyStmt], ret: Node) extends ComTerm
     
+    //case class Ascribe(v: SubNode, k: Kind) extends SubTerm with ComTerm
     case class Ascribe(v: SubNode, k: Kind) extends SubTerm with ComTerm
     
     

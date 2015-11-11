@@ -28,15 +28,17 @@ class Lexer extends Lexical {
   }
   sealed trait Operator extends Token {
     def sticking: Bool = this match {
-      case SymbolOperator(s) if s startsWith "," => false
+      case SymbolOperator(s) if (s startsWith ",") || s == ":" => false
       case _ => true // Note: will have no effect for a MethodOperator enyway (see `operatorAtLevel`)
     }
     lazy val precedence = this match {
+      case SymbolOperator(":") =>
+        ascriptionPrecedence
       case SymbolOperator(str) =>
 //        precedenceGroups getOrElse (str(0), unlistedOpsPrecedence)
         // Precedence is now the lowest of the precedence of the first and last characters!
-        Set(str.head, str.last) map (precedenceGroups.get) map (_ getOrElse unlistedOpsPrecedence) min
-      case MethodOperator(_)   => methodsPrecedence
+        Set(str.head, str.last) map precedenceGroups.get map (_ getOrElse unlistedOpsPrecedence) min
+      case MethodOperator(_)   => stuckMethodsPrecedence
     }
     def name: Str
   }
@@ -150,6 +152,7 @@ class Lexer extends Lexical {
   /** Assigns a precedence to these groups of characters, from 1 to precedenceGroupsNumber */
   val precedenceGroups = Seq(
     ",", // precedence 0
+    "",  // reserved precedence for ascription
     "?",
     "|",
     ".",
@@ -161,10 +164,15 @@ class Lexer extends Lexical {
     "+-",
     "*/%" // precedence precedenceGroupsNumber-1
   ).iterator.zipWithIndex flatMap {case(ks,v) => ks.map(_ -> v)} toMap
-  val precedenceGroupsNumber = precedenceGroups.values.toSet.size
-  /** methodPrecedence=precedenceGroupsNumber+1 for methods, 0 for all non-listed ops */
+  //val precedenceGroupsNumber = precedenceGroups.values.toSet.size
+  val precedenceGroupsNumber = precedenceGroups.values.max+1
+  /** methodPrecedence=precedenceGroupsNumber for methods, 0 for all non-listed ops */
   val precedenceLevels = 0 to precedenceGroupsNumber
-  val methodsPrecedence, unlistedOpsPrecedence = precedenceGroupsNumber // really give them the same prec?
+  /** Spaced methods have the lowest precedence (eg: a + b .lol == (a+b).lol) */
+  val spacedMethodsPrecedence = 0
+  /** Stuck methods have the lowest precedence (eg: a+b.lol == a+(b.lol) */
+  val stuckMethodsPrecedence, unlistedOpsPrecedence = precedenceGroupsNumber // really give them the same prec?
+  val ascriptionPrecedence = 1
   
 }
 

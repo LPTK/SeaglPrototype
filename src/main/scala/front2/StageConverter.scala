@@ -157,8 +157,15 @@ conv =>
 }
 
 
-abstract class SameStageConverter[A <: Stage2](a: A) extends StageConverter[A,A](a,a)
-
+abstract class SameStageConverterClass[A <: Stage2](a: A) extends StageConverter[A,A](a,a) {
+//abstract class SameStageConverter[A <: Stage2](val _a: A) extends StageConverter[A,A](_a,_a) {
+//abstract class SameStageConverter[A <: Stage2](override val a: A) extends StageConverter[A,A](a,a) {
+//  override val b: a.type = a
+//  def mod(x: a.Modif) = (x:b.Modif) |> Result.lift
+}
+//trait SameStageConverter[A <: Stage2] extends StageConverter[A,A] {
+//  def mod(x: a.Modif) = (x:b.Modif) |> Result.lift
+//}
 
 
 

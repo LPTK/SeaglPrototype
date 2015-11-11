@@ -3,6 +3,7 @@ package parsing
 import java.io.PrintStream
 import java.nio.charset.Charset
 
+import front2.SeparateTypes
 import front2.{DesugaredPrinter, ASTPrinter, ToANF}
 
 import scala.io.StdIn._
@@ -92,7 +93,8 @@ object ParserREPL extends App {
           try {
             //Terms.Block(Nil, (Builder.apply _) <|: pgrm)
             println(ASTPrinter(pgrm))
-            val anf = ToANF.vconv.nod(pgrm).toBlock
+            val septyps = SeparateTypes.vconv.nod(pgrm)    
+            val anf = ToANF.vconv.nod(septyps).toBlock
             //println(anf)
             DesugaredPrinter(anf) |> println
             //println(DesugaredPrinter(anf).getClass)

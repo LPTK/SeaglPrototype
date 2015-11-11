@@ -14,7 +14,7 @@ trait Converter {
 trait Transformer extends Converter {
   
   type Result[+T] = T
-  val Result = Monad.TrivialMonad
+  val Result = Monad.IdMonad
   
 }
 
