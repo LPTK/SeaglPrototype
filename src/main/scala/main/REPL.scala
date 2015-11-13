@@ -67,8 +67,11 @@ object REPL extends ConsoleReader {
           
           val thr = new Thread() {
             override def run() = {
-              reader.putString(indent)
-              reader.flush()  
+              //reader.putString(indent)
+              //reader.flush()
+              reader.getCursorBuffer.write(indent)
+              out.print(indent.replace("  ", "· " in GREY))
+              reader.flush()
             }
           }
           thr.setPriority(Thread.MAX_PRIORITY)
@@ -91,7 +94,7 @@ object REPL extends ConsoleReader {
       
       out.print(post)
       
-      if (code replace('\n',' ') forall (_ == ' ')) out.println
+      if (code replace('\n',' ') forall (_ == ' ')) out.println()
       else try {
         val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code))
         
