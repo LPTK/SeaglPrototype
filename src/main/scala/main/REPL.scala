@@ -18,14 +18,8 @@ import scala.util.parsing.input.Position
 import completer._
 
 /**
-  * TODO: handle empty indented lines at end of input... ?
-  * eg:
-  *   """
-  *   foo
-  *     bar
-  *     
-  *   
-  *   """
+  * Nice, Colored REPL for Seagl.
+  * 
   * 
   */
 object REPL extends ConsoleReader {

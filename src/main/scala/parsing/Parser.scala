@@ -211,8 +211,10 @@ self =>
 //  }, op => s"Wrong precedence for $op") else operator ^? { case op if op.precedence == lvl => op }
   
   def emptyLines: Parser[Unit] = rep(space.? ~ newLine) ^^^ (())
+  //def emptyLines: Parser[Unit] = rep(space | newLine) ^^^ (())
   
-  def pgrm = phrase(block(0) <~ emptyLines)
+  def actualEmptyLines = rep(space | newLine) // FIXME change defn of emptyLines?
+  def pgrm = phrase(block(0) <~ actualEmptyLines)
 
   /** Block of code indented at `ind` */
   def block(ind: Int): Parser[Term] = "block" ! positioned(indentedLines(ind, genTerm(true)(State(ind, false))) ^^ Block.apply)
