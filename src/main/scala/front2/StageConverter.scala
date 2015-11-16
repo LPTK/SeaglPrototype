@@ -95,6 +95,7 @@ conv =>
     def process(x: ta.SubTerm): Result[tb.SubTerm] = x match {
       //case x: ta.ASTTerm => process(x) // Note: for some reason, putting this case (which cannot happen) makes scalac think the rest is dead code!!
       case x: ta.ComTerm => process(x)
+      case x: ta.CoreTerm => process(x)
       case _ => scalasDumb(x)
     }
     def process(x: ta.ASTTerm): Result[tb.ASTTerm] = x match {
@@ -109,10 +110,15 @@ conv =>
       case _ => scalasDumb(x)
     }
     def process(x: ta.CoreTerm): Result[tb.CoreTerm] = x match {
-      case ta.Closure(pa, bo) => //for (pa <- process(pa); bo <- process(pa))
-        nod(bo) map (tb.Closure(pa, _))
+      case x: ta.SubTerm => subCoreTerm(x)
       case x: ta.ComTerm => process(x)
       case _ => scalasDumb(x)
+    }
+    
+    def subCoreTerm(x: ta.SubTerm with ta.CoreTerm): Result[tb.SubTerm with tb.CoreTerm] = x match {
+      case ta.Closure(pa, bo) => //for (pa <- process(pa); bo <- process(pa))
+        nod(bo) map (tb.Closure(pa, _))
+      //case _ => ???
     }
     
     def process(x: ta.Let): Result[tb.Let] = x match {

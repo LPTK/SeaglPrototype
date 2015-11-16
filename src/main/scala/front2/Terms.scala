@@ -178,7 +178,7 @@ trait Terms extends PrettyPrint {
   }
   
   trait Core extends TermsTemplate {
-    type Metadata = Origin // TODO change..? require method Metadata => common.Metadata
+//    type Metadata = Origin // TODO change..? require method Metadata => common.Metadata
     
     type Term = CoreTerm
     type Stmt = CoreStmt
@@ -186,7 +186,7 @@ trait Terms extends PrettyPrint {
     
     //case class Node(term: Term, md: Metadata) extends printer.PrettyPrinted with SelfPrintable {
     class Node(val term: Term, val md: Metadata) extends printer.PrettyPrinted with SelfPrintable {
-      def print(implicit po: PrintOptions) = Doc(term.toString, Metadata(md))
+      def print(implicit po: PrintOptions) = ??? //Doc(term.toString, Metadata(md))
     }
     def Node(term: Term, md: Metadata): Node = new Node(term, md) // it's a shame Scala fails to see it implemented with Node a case class...
     
@@ -195,7 +195,7 @@ trait Terms extends PrettyPrint {
   trait ANF extends Core {
     
     //case class Node(term: Term, md: Origin)
-    class SubNode(override val term: CoreTerm with SubTerm, md: Origin) extends Node(term, md) with printer.PrettyPrinted
+    class SubNode(override val term: CoreTerm with SubTerm, md: Metadata) extends Node(term, md) with printer.PrettyPrinted
     //def SubNode(term: CoreTerm with SubTerm, md: Metadata) = new SubNode(term, md)
     def SubNode(term: SubTerm with Term, md: Metadata): SubNode = new SubNode(term, md)
     
@@ -261,6 +261,10 @@ trait Terms extends PrettyPrint {
   
   type Type = types.Term
   type Value = types.Term
+  
+  case class FullType(typ: Type, subt: Type * Type |> Set, conc: ConcReq |> Set)
+  
+  case class ConcReq(conc: Type, args: Ls[Type])
   
 }
 

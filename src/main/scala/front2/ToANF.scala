@@ -156,7 +156,7 @@ toanf =>
   
   
   //abstract class AnfTermsConverter[TA <: a.TermsTemplate, TB <: b.TermsTemplate { type Term = TB# CoreTerm }](val _ta: TA, val _tb: TB)
-  abstract case class AnfTermsConverter[TA <: a.AST, TB <: b.Core](ta: TA, tb: TB) extends TermsConverter[TA,TB] { //(_ta,_tb) {
+  abstract case class AnfTermsConverter[TA <: a.AST, TB <: b.Core {type Metadata = Origin}](ta: TA, tb: TB) extends TermsConverter[TA,TB] { //(_ta,_tb) {
   //trait AnfTermsConverter[TA <: a.AST, TB <: b.Core] extends TermsConverter[TA,TB] { //(_ta,_tb) {
     
     val LambdaCompoId = StableId('std::Nil, Sym("&>"))

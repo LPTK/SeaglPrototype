@@ -20,6 +20,9 @@ import completer._
 /**
   * Nice, Colored REPL for Seagl.
   * 
+  * TODO: make it work better in IntelliJ
+  * Adding the following helps: -Djline.terminal=jline.UnsupportedTerminal
+  * But still, indentation is broken (`reader.getCursorBuffer.write` does not seem to work)
   * 
   */
 object REPL extends ConsoleReader {
@@ -101,10 +104,14 @@ object REPL extends ConsoleReader {
         pgrm match {
           case Parser.Success(pgrm, _) =>
             try {
+              
               out.println(info("Parsed") + ASTPrinter(pgrm).toString)
-              val septyps = SeparateTypes.vconv.nod(pgrm)    
+              
+              val septyps = SeparateTypes.vconv.nod(pgrm)
+              
               val anf = ToANF.vconv.nod(septyps).toBlock
               DesugaredPrinter(anf) |> out.println
+              
             } catch {
               case common.CompileError(msg) => "Compile Error: "+msg
             }

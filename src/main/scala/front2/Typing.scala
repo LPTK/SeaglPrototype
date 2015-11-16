@@ -1,5 +1,6 @@
 package front2
 
+import utils.Monad.State
 import utils._
 
 import common._
@@ -8,7 +9,7 @@ import Stages2._
 object Typing extends StageConverter[Desugared.type, Typed.type](Desugared, Typed) {
   
   //type Ctx = Sym ->? b.Type
-  case class Ctx(typs: Sym ->? Types.TypeKind, vals: Sym ->? b.Type)
+  case class Ctx(typs: Ident ->? Types.TypeKind, vals: Ident ->? b.Type, inPattern: Bool = false)
   object Ctx { val empty = Ctx(->?.empty, ->?.empty) }
   
   type Result[+T] = Monad.State[Ctx, T]
@@ -16,10 +17,55 @@ object Typing extends StageConverter[Desugared.type, Typed.type](Desugared, Type
   import Result._
   
   
-  
   def mod(x: a.Modif): Result[b.Modif] = ???
   
-  val vconv = ???
+  
+  def newTypVar(nameHint: Desugared.TermsTemplate# CoreTerm): b.Type = {
+    ???
+  }
+  //def md(org: Origin, typ: b.Type): b.values.Metadata = ???
+  
+  //val vconv = ???
+  object vconv extends TermsConverterClass[a.values.type, b.values.type](Desugared.values, Typed.values) with ValueConverter {
+  
+    def nod(x: vconv.ta.Node): State[Ctx, vconv.tb.Node] = //process(x.term) map {tb.Node(_, typeinfer(x.term))}
+      for {
+        typ <- typeinfer(x.term)
+        t <- process(x.term)
+      } yield tb.Node(t, (x.md, typ))
+    
+    def snod(x: vconv.ta.SubNode): State[Ctx, vconv.tb.SubNode] =
+      for {
+        typ <- typeinfer(x.term)
+        t <- subCoreTerm(x.term) //: ta.SubTerm)
+      } yield tb.SubNode(t, (x.md, typ))
+  
+    def kin(x: Desugared.types.Node): State[Ctx, Typed.types.Node] = ???
+    
+    //def mod(x: ta.Modif): Result[tb.Modif]
+    def stmt(x: ta.Stmt): State[Ctx, tb.Stmt] = ???
+    
+    //
+    
+    //override def process(x: ta.ComTerm) = x match {
+    def typeinfer(x: ta.Term): Result[b.Type] = x match {
+      case ta.Id(id) => {
+        //case ctx if ctx inPattern => (tb.Id(id), ctx.copy(vals = ctx.vals + (id -> newTypVar(x))))
+        case ctx if ctx inPattern =>
+          val typ = newTypVar(x)
+          typ -> ctx.copy(vals = ctx.vals + (id -> typ))
+        case ctx => //tb.Id(id) -> ctx.vals.get(id).getOrElse(throw CompileError("Identifier not found: "+id))
+          val typ = ctx.vals.getOrElse(id, throw CompileError("Identifier not found: "+id))
+          typ -> ctx
+      }
+      case ta.App(a, b) =>
+        // infer new typle class cstr for every typvar?
+        
+        ???
+      case _ => ??? // TODO //super.process(x)
+    }
+    
+  }
   
   val tconv = ???
   
