@@ -262,9 +262,16 @@ trait Terms extends PrettyPrint {
   type Type = types.Term
   type Value = types.Term
   
-  case class FullType(typ: Type, subt: Type * Type |> Set, conc: ConcReq |> Set)
+  /**
+    * @param typ the type expression
+    * @param fa 'for all', universal type variables
+    * @param fs 'for some', existential type variables
+    * @param subt subtyping constraints
+    * @param conc concept constraints
+    */
+  case class FullType(typ: Type, fa: Set[types.Id], fs: Set[types.Id], subt: Type -> Type |> Set, conc: ConceptApply |> Set)
   
-  case class ConcReq(conc: Type, args: Ls[Type])
+  case class ConceptApply(conc: Type, args: Ls[Type])
   
 }
 

@@ -24,7 +24,7 @@ conv =>
   val NEST_INDENT = 2
   
   def apply(x: a.values.Node) = vconv.nod(x)(Ctx.init)._1
-  //def apply(x: a.types.Node) = tconv.nod(x) // same type after erasure...
+  def applyTyp(x: a.types.Node) = tconv.nod(x)(Ctx.init)._1 // same type after erasure...
   
   case class Ctx(
     prec: Int,
@@ -249,13 +249,14 @@ object ASTPrinter extends Printer[AST.type](AST) {
   
 }
 
-object DesugaredPrinter extends Printer[Desugared.type](Desugared) {
+//object DesugaredPrinter extends Printer[Desugared.type](Desugared) {
+class ANFPrinter[S <: ANFStage with Stage2](val s: S) extends Printer[S](s) {
   import Result._
   
   def printMod(x: a.Modif): Result[Document] = (if (x.priv) "priv " else "") |> text |> lift
   
   //val tconv: TermsConverter[AST.types.type, Printed.types.type] = new PrinterTermsConverter[a.types.type, b.types.type](AST.types, Printed.types) {
-  object tconv extends PrinterTermsConverter[a.types.type, b.types.type](Desugared.types, Printed.types) with TypeConverter {
+  object tconv extends PrinterTermsConverter[a.types.type, b.types.type](a.types, Printed.types) with TypeConverter {
     import ta._
     //val co: vconv.type = vconv
     
@@ -273,7 +274,7 @@ object DesugaredPrinter extends Printer[Desugared.type](Desugared) {
   }
   
   //val vconv = new PrinterTermsConverter[a.values.type, b.values.type](AST.values, Printed.values) {
-  object vconv extends PrinterTermsConverter[a.values.type, b.values.type](Desugared.values, Printed.values) with ValueConverter {
+  object vconv extends PrinterTermsConverter[a.values.type, b.values.type](a.values, Printed.values) with ValueConverter {
     import ta._
     //val co: tconv.type = tconv
     
@@ -291,7 +292,11 @@ object DesugaredPrinter extends Printer[Desugared.type](Desugared) {
   
 }
 
+object DesugaredPrinter extends ANFPrinter[Desugared.type](Desugared)
 
+object TypedPrinter extends ANFPrinter[Typed.type](Typed) {
+  //override object vconv { }
+}
 
 
 

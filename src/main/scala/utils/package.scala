@@ -14,6 +14,7 @@ package object utils {
   val Ls = List
   
   type *[+A,+B] = (A,B)
+  type ->[+A,+B] = (A,B) // IntelliJ seems to be bugged by *, although it seems to be valid Scala
   
   type Opt[+T] = Option[T]
   val Opt = Option
@@ -32,7 +33,7 @@ package object utils {
 //  type ?=> [A,B] = PartialFunction[A,B]
   val Partial = PartialFunction
   
-  type -> [-A,+B] = A => B
+  //type -> [-A,+B] = A => B
   type ->? [A,+B] = Map[A,B]
   val ->? = Map
   type ->* [A,B] = collection.mutable.MultiMap[A,B]

@@ -2,16 +2,14 @@ package main
 
 import java.io.PrintWriter
 
-import front2.DesugaredPrinter
-import front2.SeparateTypes
-import front2.ToANF
+import common.Stages2.Typed
+import front2._
 import utils._  
 import common._
 
 import jline._
 import console._
 import parsing.Parser
-import front2.ASTPrinter
 
 import scala.util.parsing.input.Position
 
@@ -90,8 +88,8 @@ object REPL extends ConsoleReader {
         case str => str :: Nil
       } takeWhile (_.nonEmpty) mkString "\n"
       
-      def printParsePb(typ: Str, pos: ?[Position], msg: Str) = {
-        out.println(info((pos map (p => s"[$p] ") getOrElse "") + s"Parse $typ", RED) + (msg in RED))
+      def printProblem(typ: Str, pos: ?[Position], msg: Str) = {
+        out.println(info((pos map (p => s"[$p] ") getOrElse "") + s"$typ", RED) + (msg in RED))
         pos foreach (p => out.println(p.longString))
       }
       
@@ -110,27 +108,38 @@ object REPL extends ConsoleReader {
               val septyps = SeparateTypes.vconv.nod(pgrm)
               
               val anf = ToANF.vconv.nod(septyps).toBlock
-              DesugaredPrinter(anf) |> out.println
+              //DesugaredPrinter(anf) |> out.println
+              out.println(info("Desugared") + DesugaredPrinter(anf))
+              
+              val typingContext = Typing.Ctx.empty    
+              
+              val (typed, nctx) = typingContext |> Typing.vconv.nod(anf)   
+              //out.println(info("Typed", GREEN) + TypedPrinter(typed))
+              val typ = Typed.types.Node(typed.md._2, null)
+              out.println(info("Typed", GREEN) + TypedPrinter.applyTyp(typ))
               
             } catch {
-              case common.CompileError(msg) => "Compile Error: "+msg
+              case common.CompileError(msg) =>
+                //out.println("Compile Error: "+msg)
+                printProblem("Compile Error", Some(pgrm.pos), msg) // TODO better position
+              //case e => out.println(e.toString)
             }
           case Parser.Failure(msg, next) =>
-            printParsePb("Failure", Some(next.pos), msg)
+            printProblem("Parse Failure", Some(next.pos), msg)
             
           case Parser.Error(msg, next) =>
-            printParsePb("Error", Some(next.pos), msg)
+            printProblem("Parse Error", Some(next.pos), msg)
             
         }
       
       } catch {
         case Parser.lexical.ParseException(msg) =>
-          printParsePb("Exception", None, msg)
+          printProblem("Parse Exception", None, msg)
       }
       
     } catch {
       case BreakOut =>
-        println("Input closed.")
+        out.println("Input closed.")
     }
     
   }

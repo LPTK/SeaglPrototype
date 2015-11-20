@@ -35,10 +35,10 @@ conv =>
   }
   
   trait TypeConverter {
-    val self = Left(tconv): tconv.type | vconv.type
+    lazy val self = Left(tconv): tconv.type | vconv.type
   }
   trait ValueConverter {
-    val self = Right(vconv): tconv.type | vconv.type
+    lazy val self = Right(vconv): tconv.type | vconv.type
   }
   
   // TODO: define ValuesConverter and TypesConverter with `co` already set?
@@ -115,7 +115,11 @@ conv =>
       case _ => scalasDumb(x)
     }
     
+    /** Note: not named `process` because of erasure
+      * TODO rm?
+      */
     def subCoreTerm(x: ta.SubTerm with ta.CoreTerm): Result[tb.SubTerm with tb.CoreTerm] = x match {
+      case x: ta.ComTerm => process(x: ta.ComTerm).asInstanceOf[Result[tb.SubTerm with tb.CoreTerm]] // FIXME? safe?
       case ta.Closure(pa, bo) => //for (pa <- process(pa); bo <- process(pa))
         nod(bo) map (tb.Closure(pa, _))
       //case _ => ???

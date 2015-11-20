@@ -7,6 +7,7 @@ import common._
 import Stages2._
 
 object Typing extends StageConverter[Desugared.type, Typed.type](Desugared, Typed) {
+conv =>
   
   //type Ctx = Sym ->? b.Type
   case class Ctx(typs: Ident ->? Types.TypeKind, vals: Ident ->? b.Type, inPattern: Bool = false)
@@ -16,12 +17,23 @@ object Typing extends StageConverter[Desugared.type, Typed.type](Desugared, Type
   val Result = Monad.State[Ctx]
   import Result._
   
+  implicit class Dummy[T](self: Result[T]) {
+    def filter(p: T => Bool): Result[T] = {
+      //ctx => { val (t, nctx) = self(ctx); require(p(t)); t -> nctx }
+      self map { t => require(p(t)); t }
+    }
+  }
   
-  def mod(x: a.Modif): Result[b.Modif] = ???
+  //def modif(f: Ctx => Ctx): Result[Unit] = {
+  //  case ctx => () -> f(ctx)
+  //}
+  def modif(f: Ctx => Ctx): Result[Unit] = f andThen (() -> _)
+  
+  def mod(x: a.Modif): Result[b.Modif] = x |> lift // FIXME
   
   
   def newTypVar(nameHint: Desugared.TermsTemplate# CoreTerm): b.Type = {
-    ???
+    b.types.Id(new SyntheticId(None)) // TODO use a nameHint
   }
   //def md(org: Origin, typ: b.Type): b.values.Metadata = ???
   
@@ -30,44 +42,100 @@ object Typing extends StageConverter[Desugared.type, Typed.type](Desugared, Type
   
     def nod(x: vconv.ta.Node): State[Ctx, vconv.tb.Node] = //process(x.term) map {tb.Node(_, typeinfer(x.term))}
       for {
-        typ <- typeinfer(x.term)
-        t <- process(x.term)
+        (t, typ) <- typeinfer(x.term)
+        //t <- process(x.term)
       } yield tb.Node(t, (x.md, typ))
     
     def snod(x: vconv.ta.SubNode): State[Ctx, vconv.tb.SubNode] =
       for {
-        typ <- typeinfer(x.term)
-        t <- subCoreTerm(x.term) //: ta.SubTerm)
+        (t, typ) <- typeinferSub(x.term)
+        //t <- subCoreTerm(x.term) //: ta.SubTerm)
       } yield tb.SubNode(t, (x.md, typ))
   
     def kin(x: Desugared.types.Node): State[Ctx, Typed.types.Node] = ???
     
     //def mod(x: ta.Modif): Result[tb.Modif]
-    def stmt(x: ta.Stmt): State[Ctx, tb.Stmt] = ???
+    // ta.Stmt == Core.Stmt == Let|Impure|RecBlock
+    //def stmt(x: ta.Stmt): State[Ctx, tb.Stmt] = x match {
+    //  case ta.Let(mod, pa, bo, wh) => process(x)
+    //  case _ => process(x)
+    //}
+    def stmt(x: ta.Stmt): State[Ctx, tb.Stmt] = process(x)
+    
+    override def process(x: ta.Let): Result[tb.Let] = x match {
+      case ta.Let(mo,pa,bo,wh) => for {
+        mo <- mod(mo)
+        () <- modif(_.copy(inPattern = true))
+        pa <- nod(pa)
+        () <- modif(_.copy(inPattern = false))
+        bo <- nod(bo)
+        wh <- Monad.sequence(wh map conv.process)
+      } yield tb.Let(mo,pa,bo,wh)
+    }
     
     //
     
-    //override def process(x: ta.ComTerm) = x match {
-    def typeinfer(x: ta.Term): Result[b.Type] = x match {
-      case ta.Id(id) => {
-        //case ctx if ctx inPattern => (tb.Id(id), ctx.copy(vals = ctx.vals + (id -> newTypVar(x))))
-        case ctx if ctx inPattern =>
-          val typ = newTypVar(x)
-          typ -> ctx.copy(vals = ctx.vals + (id -> typ))
-        case ctx => //tb.Id(id) -> ctx.vals.get(id).getOrElse(throw CompileError("Identifier not found: "+id))
-          val typ = ctx.vals.getOrElse(id, throw CompileError("Identifier not found: "+id))
-          typ -> ctx
-      }
+    def typeinfer(x: ta.Term): Result[tb.Term -> b.Type] = x match {
+      case x: ta.SubTerm => typeinferSub(x)
+        
       case ta.App(a, b) =>
         // infer new typle class cstr for every typvar?
         
         ???
-      case _ => ??? // TODO //super.process(x)
+        
+      case ta.DepApp(fu,ar) => ??? //for(fu <- snod(fu); ar <- co.snod(ar)) yield tb.DepApp(fu,ar)
+        
+      case ta.Block(sts, re) =>
+        for (sts <- Monad.sequence(sts map conv.process); re <- nod(re))
+          yield tb.Block(sts, re) -> re.md._2  
+        
+    }
+    
+    //override def process(x: ta.ComTerm) = x match {
+    def typeinferSub(x: ta.SubTerm with ta.Term): Result[tb.SubTerm with tb.Term -> b.Type] = x match {
+        
+      case x: ta.Literal[_] => super.subCoreTerm(x) map { _ -> (x match {
+        case ta.UnitLit => b.types.UnitLit
+        case ta.CharLit(v) => b.types.CharLit(v)
+        case ta.StrLit(v) => b.types.StrLit(v)
+        case ta.IntLit(v) => b.types.IntLit(v)
+        case ta.RatLit(v) => b.types.RatLit(v)
+      })}
+        
+      case ta.Id(id) => subCoreTerm(x) flatMap { sup => { // ctx =>
+        //case ctx if ctx inPattern => (tb.Id(id), ctx.copy(vals = ctx.vals + (id -> newTypVar(x))))
+        case ctx if ctx inPattern =>
+        //if (ctx inPattern) {
+          val typ = newTypVar(x)
+          sup -> typ -> ctx.copy(vals = ctx.vals + (id -> typ))
+        //}
+        case ctx => //tb.Id(id) -> ctx.vals.get(id).getOrElse(throw CompileError("Identifier not found: "+id))
+        //else {
+          val typ = ctx.vals.getOrElse(id, throw CompileError("Identifier not found: "+id))
+          sup -> typ -> ctx
+        //}
+      }}
+        
+      case ta.Atom(na,ar) => ??? //Monad.sequence(ar map snod) map { tb.Atom(na, _) }
+        
+      case ta.Ascribe(v, k) => for {
+        v <- snod(v)
+        k <- kin(k)
+        _ <- (ctx: Ctx) => () -> ctx // TODO add subt cstr v.tpe <: k  
+      } yield tb.Ascribe(v,k) -> k.term  
+        
+      case ta.Closure(pa, bo) =>
+        val typ = newTypVar(ta.Id(pa))
+        ctx =>
+          nod(bo)(ctx) // TODO: how to add pa<:typ only for typing 'bo'?
+        ???
+        
     }
     
   }
   
-  val tconv = ???
+  // FIXME rm lazy
+  lazy val tconv = ???
   
   
 }
