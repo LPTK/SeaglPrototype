@@ -87,7 +87,7 @@ toanf =>
     
     
     /** For types, we know nodes will never generate additional statements (types.App is not moved out of subexpressions) */
-    def nod(x: ta.Node): Result[tb.Node] = tb.Node(ast2Core(x.term).res, x.md) |> lift
+    def nod(x: ta.Node): Result[tb.Node] = tb.Node(ast2Core(x.term, x.md).res, x.md) |> lift
     
     //def snod(x: ta.SubNode): Result[tb.SubNode] = b.TypeNode(ast2Core(x.term).res, x.md) |> lift
     def snod(x: ta.SubNode): Result[tb.SubNode] = nod(x)
@@ -128,11 +128,11 @@ toanf =>
     //def kin(x: ta.Kind): Result[tb.Kind] = tconv.ast2Core(x)
     def kin(x: ta.Kind): Result[tb.Kind] = tconv.nod(x)
     
-    def nod(x: ta.Node): Result[tb.Node] = ast2Core(x.term) map {tb.Node(_, x.md)}
+    def nod(x: ta.Node): Result[tb.Node] = ast2Core(x.term, x.md) map {tb.Node(_, x.md)}
     
     /** For values, a simple node may generate several new statements */
     def snod(x: ta.SubNode): Result[tb.SubNode] = {
-      val Result(sts, ret) = ast2Core(x.term)
+      val Result(sts, ret) = ast2Core(x.term, x.md)
       val (s,t) = ret match {
         case ret: tb.SubTerm => (Nil, ret)
         case _ =>
@@ -218,7 +218,7 @@ toanf =>
       case _ => tb.Block(stmts toList, ret) //|> blockAsTerm
     }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
    
-    def ast2Core(x: ta.ASTTerm): Result[tb.CoreTerm] = x match {
+    def ast2Core(x: ta.ASTTerm, org: Origin): Result[tb.CoreTerm] = x match {
       case ta.Block(sts, ret) =>
         val Result(pre, sts2) = Monad.sequence(sts map toanf.process)
         //nod(ret) map {tb.Block(pre ++ sts2, _)}
@@ -261,9 +261,9 @@ toanf =>
         // Actually, reduce to Apps BEFORE converting!
         val Nd = ta.Node
         val apps = lams map Nd reduce {(a,b) => ta.App(ta.App(a, LambdaCompoId |> ta.Id |> Nd) |> Nd, b) |> Nd}
-        ast2Core(apps.term)
-      case ta.OpAppL(ar, op) => snod(ar) map {tb.App(_, tb.SubNode(tb.Id(op.id), Synthetic(phaseName, None)/*TODO better md*/))}
-      case ta.OpAppR(op, ar) => snod(ar) map {tb.App(tb.SubNode(tb.Id(op.id), Synthetic(phaseName, None)/*TODO better md*/), _)} // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
+        ast2Core(apps.term, org)
+      case ta.OpAppL(ar, op) => snod(ar) map {tb.App(_, tb.SubNode(tb.Id(op.id), Synthetic(phaseName, org|>some)/*TODO better md*/))}
+      case ta.OpAppR(op, ar) => snod(ar) map {tb.App(tb.SubNode(tb.Id(op.id), Synthetic(phaseName, org|>some)/*TODO better md*/), _)} // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
       case ta.OpTerm(op) => tb.Id(op.id) |> lift
       //case _ => ??? // TODO OpApp, Let, etc.
     }

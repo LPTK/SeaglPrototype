@@ -6,6 +6,11 @@ import common._
 import scala.collection.Seq
 import scala.util.parsing.input.Positional
 
+/**
+  * TODO remove PrettyPrint & clean
+  * TODO use Node for ops
+  * 
+  */
 trait Terms extends PrettyPrint {
   stage: Stage2 =>
   

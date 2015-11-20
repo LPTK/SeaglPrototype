@@ -6,6 +6,7 @@ import utils._
 import common._
 import Stages2._
 
+
 object Typing extends StageConverter[Desugared.type, Typed.type](Desugared, Typed) {
 conv =>
   
@@ -42,13 +43,13 @@ conv =>
   
     def nod(x: vconv.ta.Node): State[Ctx, vconv.tb.Node] = //process(x.term) map {tb.Node(_, typeinfer(x.term))}
       for {
-        (t, typ) <- typeinfer(x.term)
+        (t, typ) <- typeinfer(x.term, x.md)
         //t <- process(x.term)
       } yield tb.Node(t, (x.md, typ))
     
     def snod(x: vconv.ta.SubNode): State[Ctx, vconv.tb.SubNode] =
       for {
-        (t, typ) <- typeinferSub(x.term)
+        (t, typ) <- typeinferSub(x.term, x.md)
         //t <- subCoreTerm(x.term) //: ta.SubTerm)
       } yield tb.SubNode(t, (x.md, typ))
   
@@ -75,24 +76,24 @@ conv =>
     
     //
     
-    def typeinfer(x: ta.Term): Result[tb.Term -> b.Type] = x match {
-      case x: ta.SubTerm => typeinferSub(x)
+    def typeinfer(x: ta.Term, org: Origin): Result[tb.Term -> b.Type] = x match {
+      case x: ta.SubTerm => typeinferSub(x, org)
         
-      case ta.App(a, b) =>
-        // infer new typle class cstr for every typvar?
-        
-        ???
+      case ta.App(fun, arg) =>
+        // TODO infer new typle class cstr for every typvar?
+        for { fun <- snod(fun); arg <- snod(arg) }
+          yield fun.term -> fun.md._2 // TODO //tb.App(fun, arg) -> b.types.App(fun.md._2, arg.md._2)
         
       case ta.DepApp(fu,ar) => ??? //for(fu <- snod(fu); ar <- co.snod(ar)) yield tb.DepApp(fu,ar)
         
       case ta.Block(sts, re) =>
         for (sts <- Monad.sequence(sts map conv.process); re <- nod(re))
-          yield tb.Block(sts, re) -> re.md._2  
+          yield tb.Block(sts, re) -> re.md._2
         
     }
     
     //override def process(x: ta.ComTerm) = x match {
-    def typeinferSub(x: ta.SubTerm with ta.Term): Result[tb.SubTerm with tb.Term -> b.Type] = x match {
+    def typeinferSub(x: ta.SubTerm with ta.Term, org: Origin): Result[tb.SubTerm with tb.Term -> b.Type] = x match {
         
       case x: ta.Literal[_] => super.subCoreTerm(x) map { _ -> (x match {
         case ta.UnitLit => b.types.UnitLit
@@ -111,7 +112,7 @@ conv =>
         //}
         case ctx => //tb.Id(id) -> ctx.vals.get(id).getOrElse(throw CompileError("Identifier not found: "+id))
         //else {
-          val typ = ctx.vals.getOrElse(id, throw CompileError("Identifier not found: "+id))
+          val typ = ctx.vals.getOrElse(id, throw CompileError("Identifier not found: "+id, Some(org)))
           sup -> typ -> ctx
         //}
       }}

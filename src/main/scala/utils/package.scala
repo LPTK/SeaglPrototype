@@ -55,6 +55,12 @@ package object utils {
     def shit (msg: Str) = throw new Exception("Something " + msg)
   }
   
+  def some[A](a: A) = Some(a)
+  def none = None
+  def left[A](a: A) = Left(a)
+  def right[A](a: A) = Right(a)
+  
+  
   implicit class Andable[T](val __self: T) extends AnyVal {
     
     def and(f: T => Unit) = { f(__self); __self }

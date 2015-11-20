@@ -25,6 +25,8 @@ import completer._
   * Box drawing:
   * https://en.wikipedia.org/wiki/Box-drawing_character
   * 
+  * TODO: maybe enter multi-line mode if first line entered is empty?
+  * 
   */
 object REPL extends ConsoleReader {
   val reader = this  
@@ -122,9 +124,18 @@ object REPL extends ConsoleReader {
         case str => str :: Nil
       } takeWhile (_.nonEmpty) mkString "\n"
       
-      def printProblem(typ: Str, pos: ?[Position], msg: Str) = {
-        out.println(info((pos map (p => s"[$p] ") getOrElse "") + s"$typ", RED) + (msg in RED))
-        pos foreach (p => out.println(p.longString))
+      def printProblem(typ: Str, org: ?[Origin], msg: Str, fallBackOrgName: ?[Str] = None): Unit = org match {
+        case Some(SourceCode(pos)) =>
+          out.println(info(s"[$pos] $typ", RED) + (msg in RED))
+          out.println(pos.longString)
+        case Some(Synthetic(cre, org)) =>
+          printProblem(typ, org, msg, cre |> some)
+        case Some(MixedOrg(_)) =>
+          ??? // TODO
+        case None if fallBackOrgName isDefined =>
+          out.println(info(s"[synthesized in ${fallBackOrgName get}] $typ", RED) + (msg in RED))
+        case None =>
+          out.println(info(typ, RED) + (msg in RED))
       }
       
       out.print(post)
@@ -156,16 +167,14 @@ object REPL extends ConsoleReader {
               out.println(info("Typed", GREEN) + doc)
               
             } catch {
-              case common.CompileError(msg) =>
-                //out.println("Compile Error: "+msg)
-                printProblem("Compile Error", Some(pgrm.pos), msg) // TODO better position
-              //case e => out.println(e.toString)
+              case common.CompileError(msg, org) =>
+                printProblem("Compile Error", org, msg)
             }
           case Parser.Failure(msg, next) =>
-            printProblem("Parse Failure", Some(next.pos), msg)
+            printProblem("Parse Failure", Some(next.pos |> SourceCode), msg)
             
           case Parser.Error(msg, next) =>
-            printProblem("Parse Error", Some(next.pos), msg)
+            printProblem("Parse Error", Some(next.pos |> SourceCode), msg)
             
         }
       
