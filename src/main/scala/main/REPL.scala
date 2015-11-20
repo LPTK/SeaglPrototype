@@ -22,6 +22,9 @@ import completer._
   * Adding the following helps: -Djline.terminal=jline.UnsupportedTerminal
   * But still, indentation is broken (`reader.getCursorBuffer.write` does not seem to work)
   * 
+  * Box drawing:
+  * https://en.wikipedia.org/wiki/Box-drawing_character
+  * 
   */
 object REPL extends ConsoleReader {
   val reader = this  
@@ -43,6 +46,34 @@ object REPL extends ConsoleReader {
   
   def main(args: Array[String]): Unit = {
     
+    val pr = out.println(_: Any)  
+    
+    //println(("a").length.toString)
+    //println(("a" in BLUE) map (_ toInt) mkString " ")
+    
+    //val frameChar = "~o~" in CYAN
+    ////val frameChar = ("~"+("o" in BOLD)+"~") in CYAN
+    //val frame = frameChar * 11 // 26 chars
+    //pr(frame)
+    //pr( frameChar + " Welcome to  " + ("Leopar" in RED in BOLD) + (s" v.$VERSION  " in YELLOW) + frameChar )
+    //pr(frame)
+    
+    val frameLine = "═" * 29
+    val frameChar = "║" in CYAN
+    val cutie = "~" in BLUE in BOLD
+    val txtClr = RESET //YELLOW
+    pr(("╔" + frameLine + "╗") in CYAN)
+    pr( s"$frameChar $cutie " + ("Welcome to " in txtClr) + ("Leopar" in RED in BOLD) + (s" v.$VERSION " in txtClr) + s"$cutie $frameChar" )
+    pr(("╚" + frameLine + "╝") in CYAN)
+    
+    pr("Type a space at the end of your input to enter multiline mode, and a comma to exit it." in GREY)
+    //pr("Type a comma after your input to enter multiline mode." in GREY)
+    
+    out.println()
+    
+    var typingContext = Typing.Ctx.empty
+    var printingContext = TypedPrinter.Ctx.init
+    
     object BreakOut extends Exception
     
     try while (true) {
@@ -55,6 +86,8 @@ object REPL extends ConsoleReader {
         if (line != null) indent = line.takeWhile(_ == ' ') //.replaceFirst("  ",pre)
         line
       }
+      
+      var multilineMode = false
       
       val code = Iterate(readLine) ++ {
         reader.setPrompt(pre)
@@ -79,12 +112,13 @@ object REPL extends ConsoleReader {
           thr.setDaemon(true)
           thr.start()  
           
-          readLine
+          if (multilineMode) readLine else ""
         }
       } flatMap {
         case null => throw BreakOut
         case "" => "" :: Nil
         case str if str.last == ';' => str.init :: "" :: Nil
+        case str if str.last == ' ' => multilineMode = true; str :: Nil
         case str => str :: Nil
       } takeWhile (_.nonEmpty) mkString "\n"
       
@@ -111,12 +145,15 @@ object REPL extends ConsoleReader {
               //DesugaredPrinter(anf) |> out.println
               out.println(info("Desugared") + DesugaredPrinter(anf))
               
-              val typingContext = Typing.Ctx.empty    
+              val (typed, nctx) = typingContext |> Typing.vconv.nod(anf)
+              typingContext = nctx
               
-              val (typed, nctx) = typingContext |> Typing.vconv.nod(anf)   
               //out.println(info("Typed", GREEN) + TypedPrinter(typed))
               val typ = Typed.types.Node(typed.md._2, null)
-              out.println(info("Typed", GREEN) + TypedPrinter.applyTyp(typ))
+              //out.println(info("Typed", GREEN) + TypedPrinter.applyTyp(typ))
+              val (doc, npctx) = printingContext |> TypedPrinter.tconv.nod(typ)
+              printingContext = npctx
+              out.println(info("Typed", GREEN) + doc)
               
             } catch {
               case common.CompileError(msg) =>

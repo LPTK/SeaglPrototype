@@ -4,6 +4,8 @@ import utils._
 package object common {
   import scala.language.implicitConversions
   
+  val VERSION = 0.1  
+  
   implicit def toPrintableContext(ctx: StringContext): PrintableContext = new PrintableContext(ctx)
   
   
