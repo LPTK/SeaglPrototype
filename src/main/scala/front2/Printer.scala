@@ -21,6 +21,8 @@ abstract class Printer[A <: Stage2](val _a: A) extends StageConverter[A,Printed.
 conv =>
   import Printer._
   
+  val NEST_INDENT = 2
+  
   def apply(x: a.values.Node) = vconv.nod(x)(Ctx.init)._1
   //def apply(x: a.types.Node) = tconv.nod(x) // same type after erasure...
   
@@ -103,6 +105,7 @@ conv =>
     }
     */
     def print(x: ComTerm): Result[Document] = x match {
+      case StrLit(str) => doc""""$str"""" |> lift
       case Literal(v) => v.toString |> text |> lift
       case Id(id @ (StableId(_,_) | LocalId(_))) => id.toString |> text |> lift
 //      case Id(SyntheticId(None)) => (s: Ctx) => text("$tmp"+s.idNum) -> s.copy(idNum = s.idNum+1)
@@ -116,16 +119,17 @@ conv =>
       case DepApp(fun, arg) => for(fun <- snod(fun); arg <- co.snod(arg))
         yield doc"($fun $arg)"
       case Block(stmts, ret) => for { stmts <- Monad.sequence(stmts map conv.print); ret <- nod(ret) }
-        yield "{ " :: ((stmts :+ ret) mkDocument "; ") :: " }"
+        yield group("{" :/: nest(NEST_INDENT, (stmts :+ ret) mkDocument (";" :: break)) :/: "}")
       case Ascribe(v, k) => for(v <- snod(v); k <- print(k))
         yield doc"($v: $k)"
     }
     
     def print(x: ASTTerm): Result[Document] = x match {
       case Lambda(pat, bod) => for(pat <- nod(pat); bod <- nod(bod))
-        yield doc"($pat => $bod)"
+        //yield doc"($pat => $bod)"
+        yield group(doc"($pat =>" :/: nest(NEST_INDENT, doc"$bod)"))
       case LambdaCompo(lams) => for(lams <- Monad.sequence(lams map print))
-        yield "{" :: lams.mkDocument(" | ") :: "}"
+        yield "{" :/: nest(NEST_INDENT, lams.mkDocument(break :: "| ")) :/: "}" |> group
       case OpAppL(ar, op) => for (ar <- snod(ar)) yield doc"($ar $op)"
       case OpAppR(op, ar) => for (ar <- snod(ar)) yield doc"($op $ar)"
       case OpTerm(op) => doc"($op)" |> lift
@@ -137,7 +141,8 @@ conv =>
     def print(x: CoreTerm): Result[Document] = x match {
       case x: ComTerm => print(x)
       case Closure(id, bod) => for (id <- print(Id(id));bod <- nod(bod))
-        yield doc"($id => $bod)" // TODO should use a free-standing function for idents
+        // TODO should use a free-standing function for idents
+        yield doc"($id => $bod)"
     }
     
     def print(x: ComStmt): Result[Document] = x match {
