@@ -10,6 +10,8 @@ import Stages2._
 object Typing extends StageConverter[Desugared.type, Typed.type](Desugared, Typed) {
 conv =>
   
+  val phaseName = "Typing"
+  
   //type Ctx = Sym ->? b.Type
   case class Ctx(typs: Ident ->? Types.TypeKind, vals: Ident ->? b.Type, inPattern: Bool = false)
   object Ctx { val empty = Ctx(->?.empty, ->?.empty) }
@@ -33,8 +35,8 @@ conv =>
   def mod(x: a.Modif): Result[b.Modif] = x |> lift // FIXME
   
   
-  def newTypVar(nameHint: Desugared.TermsTemplate# CoreTerm): b.Type = {
-    b.types.Id(new SyntheticId(None)) // TODO use a nameHint
+  def newTypVar(nameHint: Desugared.TermsTemplate# CoreTerm, org: Origin): b.Type = {
+    b.types.Node(b.types.Id(new SyntheticId(None)), Synthetic(phaseName, org |> some)) // TODO use a nameHint
   }
   //def md(org: Origin, typ: b.Type): b.values.Metadata = ???
   
@@ -95,19 +97,19 @@ conv =>
     //override def process(x: ta.ComTerm) = x match {
     def typeinferSub(x: ta.SubTerm with ta.Term, org: Origin): Result[tb.SubTerm with tb.Term -> b.Type] = x match {
         
-      case x: ta.Literal[_] => super.subCoreTerm(x) map { _ -> (x match {
+      case x: ta.Literal[_] => super.subCoreTerm(x) map { _ -> b.types.Node(x match {
         case ta.UnitLit => b.types.UnitLit
         case ta.CharLit(v) => b.types.CharLit(v)
         case ta.StrLit(v) => b.types.StrLit(v)
         case ta.IntLit(v) => b.types.IntLit(v)
         case ta.RatLit(v) => b.types.RatLit(v)
-      })}
+      }, org)}
         
       case ta.Id(id) => subCoreTerm(x) flatMap { sup => { // ctx =>
         //case ctx if ctx inPattern => (tb.Id(id), ctx.copy(vals = ctx.vals + (id -> newTypVar(x))))
         case ctx if ctx inPattern =>
         //if (ctx inPattern) {
-          val typ = newTypVar(x)
+          val typ = newTypVar(x, org)
           sup -> typ -> ctx.copy(vals = ctx.vals + (id -> typ))
         //}
         case ctx => //tb.Id(id) -> ctx.vals.get(id).getOrElse(throw CompileError("Identifier not found: "+id))
@@ -121,12 +123,14 @@ conv =>
         
       case ta.Ascribe(v, k) => for {
         v <- snod(v)
-        k <- kin(k)
-        _ <- (ctx: Ctx) => () -> ctx // TODO add subt cstr v.tpe <: k  
-      } yield tb.Ascribe(v,k) -> k.term  
+        k <- tconv.nod(k)//kin(k)
+        //k <- (??? : Result[b.types.Node])
+        _ <- (ctx: Ctx) => () -> ctx // TODO add subt cstr v.tpe <: k
+        //() <- modif(_.copy(...))
+      } yield tb.Ascribe(v,k) -> k  
         
       case ta.Closure(pa, bo) =>
-        val typ = newTypVar(ta.Id(pa))
+        val typ = newTypVar(ta.Id(pa), org)
         ctx =>
           nod(bo)(ctx) // TODO: how to add pa<:typ only for typing 'bo'?
         ???
@@ -136,7 +140,7 @@ conv =>
   }
   
   // FIXME rm lazy
-  lazy val tconv = ???
+  lazy val tconv: TermsConverterClass[a.types.type, b.types.type] = ???
   
   
 }

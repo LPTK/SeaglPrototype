@@ -27,6 +27,15 @@ import completer._
   * 
   * TODO: maybe enter multi-line mode if first line entered is empty?
   * 
+  * Complex type mismatch messages should be printed this way:
+  *   Type mismatch:
+  *   Type 1: ...
+  *   Type 2: ...
+  *   Type 1 was inferred here: ...
+  *     because: ...
+  *   Type 2 was inferred here: ...
+  *     because: ...
+  * 
   */
 object REPL extends ConsoleReader {
   val reader = this  
@@ -160,7 +169,8 @@ object REPL extends ConsoleReader {
               typingContext = nctx
               
               //out.println(info("Typed", GREEN) + TypedPrinter(typed))
-              val typ = Typed.types.Node(typed.md._2, null)
+              //val typ = Typed.types.Node(typed.md._2, null)
+              val typ = typed.md._2
               //out.println(info("Typed", GREEN) + TypedPrinter.applyTyp(typ))
               val (doc, npctx) = printingContext |> TypedPrinter.tconv.nod(typ)
               printingContext = npctx

@@ -265,8 +265,10 @@ trait Terms {
     }
   }
   
-  type Type = types.Term
-  type Value = types.Term
+  //type Type = types.Term
+  //type Value = types.Term
+  type Type = types.Node
+  type Value = types.Node
   
   /**
     * @param typ the type expression
