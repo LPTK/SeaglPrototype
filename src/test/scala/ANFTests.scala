@@ -113,6 +113,8 @@ class ANFTests extends FunSuite {
     
     anfEqt(anf"a b => c", anf"_x => (a b = _x; c)")
     
+    anfEqt(anf"a b c => d e f", anf"_arg => ((_ab c) = _arg; (a b) = _ab; _de = (d e); (_de f))")
+    
   }
   
   test("bloc") {

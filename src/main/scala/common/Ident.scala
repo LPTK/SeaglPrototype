@@ -17,7 +17,9 @@ sealed trait Ident {
 } 
 case class StableId(path: Ls[Sym], name: Sym) extends Ident // eg: `Seagl :: Lang :: Int`
 case class LocalId(name: Sym) extends Ident
-class SyntheticId(val nameHint: Opt[Sym] = None) extends Ident
+class SyntheticId(val nameHint: Opt[Sym] = None) extends Ident {
+  override def toString = "SynId" + nameHint.map(n => s"[${n getStr}]").getOrElse("")    
+}
 object SyntheticId {
   def unapply(sy: SyntheticId) = Some(sy.nameHint)
 }
