@@ -109,6 +109,33 @@ object Stages2 {
   
   
   
+  /** useful? (if not rm, and rm AnyTerm/AnyStmt) */
+  object Trivial extends Stage2 with Common {
+    
+    object typez extends TrivialTerms with ComTypes {
+      type DualWorld = values.type
+      lazy val dualWorld = values
+      
+      //def stmt2anyS = Left(_: Stmt)
+    }
+    object valuez extends DualTemplate[types.type](types) with TrivialTerms with ComValues {
+      //def stmt2anyS = Right(_: Stmt)
+    }
+    val values = valuez
+    val types = typez
+    
+    trait TrivialTerms extends TermsTemplate {
+      type Term = AnyTerm
+      type Node = Term
+      type SubNode = Node
+      type Kind = Unit
+      type Metadata = Unit
+      type Stmt = AnyStmt
+      def Node(term: Term, md: Metadata): Node = term
+      def SubNode(term: SubTerm with Term, md: Metadata): SubNode = term
+    }
+  }
+  
   object Printed extends Stage2 with Common {
     
     object typez extends DocTerms with ComTypes {
@@ -203,7 +230,8 @@ object Stages2 {
   trait Common { // TODO use
   self: Stage2 =>
     
-    abstract class DualTemplate[DW <: TermsTemplate](dw: DW) extends TermsTemplate {
+    abstract class DualTemplate[DW <: TermsTemplate](dw: DW) { //extends TermsTemplate {
+    self: TermsTemplate =>
       type DualWorld = DW
       lazy val dualWorld = dw
       
@@ -212,6 +240,7 @@ object Stages2 {
     
     trait ComTypes { self: TermsTemplate =>
       def stmt2anyS = Left(_: Stmt)
+      //def stmt2anyS: types.Stmt => GenStmt = Left(_: types.Stmt)
     }
     trait ComValues { self: TermsTemplate =>
       def stmt2anyS = Right(_: Stmt)

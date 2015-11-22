@@ -16,7 +16,7 @@ class ANFContext(ctx: StringContext) {
   object anf {
     
     def apply(nodes: Node*): Node = {
-      val code = ctx.parts map { p => p + "__hole" } mkString
+      val code = (ctx.parts.init map { p => p + "(__hole)" }) :+ ctx.parts.last mkString
       val pgrm = Parser.pgrm(new Parser.lexical.Scanner(code)).get // TODO handle error  
       val septyps = SeparateTypes.vconv.nod(pgrm)
       val anf = ToANF.vconv.nod(septyps).toBlock

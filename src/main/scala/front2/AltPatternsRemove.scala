@@ -8,6 +8,7 @@ import Stages2.AST
 /**
   * TODO implement and use this class
   * TODO perhaps this should be merged with ToANF?
+  * TODO generalize and use to replace LocalId with SyntheticId
   * 
   * Removes patterns with alternatives, transforming them into extractions through lambdas.
   * For example:

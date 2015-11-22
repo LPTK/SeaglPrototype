@@ -26,7 +26,7 @@ toanf =>
    * Values nodes generate new statements while extracting non-sub-terms from sub-term position (eg: "f a" in "f a b")
    * Both values and types may also generate statements when removing the ModBlock syntactic tree. 
    */
-  case class Result[+T](genStmts: Ls[b.AnyStmt], res: T) {
+  case class Result[+T](genStmts: Ls[b.GenStmt], res: T) {
     def toBlock(implicit ev: T <:< b.values.Node) =
       //b.values.Node(b.values.Block(genStmts, res), Synthetic("toplevel", None))
       vconv.mkBlock(genStmts: _*)(res) // TODO use md: Synthetic("toplevel", None))
@@ -49,7 +49,7 @@ toanf =>
     * Expects that in AST, ModBlocks have the modifier Type if it contains type statements
     * Also, for now let statements in AST are wrapped as expressions in Impure statements... (don't ask)
     */
-  override def process(x: a.AnyStmt): Result[b.AnyStmt] = {
+  override def process(x: a.GenStmt): Result[b.GenStmt] = {
     val stmt = x.fold (identity, identity)
     stmt match {
       case a.ModBlock(modifs, stmts) =>
@@ -213,7 +213,7 @@ toanf =>
 //    }) //, ret.md // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
     
     /** TODO: that's almost the same as in tconv :( ... would be nice to refactor */
-    def mkBlock(stmts: b.AnyStmt*)(ret: tb.Node) = tb.Node(ret.term match {
+    def mkBlock(stmts: b.GenStmt*)(ret: tb.Node) = tb.Node(ret.term match {
       case tb.Block(s, r) => tb.Block(stmts ++ s toList, r) //|> blockAsTerm
       case _ => tb.Block(stmts toList, ret) //|> blockAsTerm
     }, ret.md) // TODO // MixedOrg((stmts map (_ org)) :+ ret.org))
@@ -283,7 +283,7 @@ toanf =>
 //        wh <- Monad.sequence(wh map toanf.process)
 //      } yield tb.Let(mo, pa, bo, wh)
 //    }
-    def let(x: ta.Let): Result[tb.Let * Ls[b.AnyStmt]] = x match {
+    def let(x: ta.Let): Result[tb.Let * Ls[b.GenStmt]] = x match {
       case ta.Let(mo, pa, bo, wh) => for {
         mo <- mod(mo)
         Result(post, pa2) = invert(nod(pa))
@@ -297,7 +297,7 @@ toanf =>
     }
     
   }
-  def reverse(x: b.AnyStmt): b.AnyStmt = x match {
+  def reverse(x: b.GenStmt): b.GenStmt = x match {
     case Left(b.types.Let(mo, pa, bo, wh)) => Left(b.types.Let(mo, bo, pa, wh))
     case Right(b.values.Let(mo, pa, bo, wh)) => Right(b.values.Let(mo, bo, pa, wh))
     case _ => x

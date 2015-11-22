@@ -61,7 +61,7 @@ conv =>
   
   def printMod(x: a.Modif): Result[Document]
   
-  def print(x: a.AnyStmt): Result[Document] = x match {
+  def print(x: a.GenStmt): Result[Document] = x match {
     case Left(ts) => tconv.printStmt(ts)
     case Right(vs) => vconv.printStmt(vs)
   }

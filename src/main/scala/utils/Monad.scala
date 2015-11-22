@@ -34,6 +34,13 @@ object Monad {
     def map[A,B](ma: F[A], f: A => B): F[B] = f(ma)
   }
   
+  implicit val OptMonad = new Monad[Opt] {
+    def lift[A](a: A): M[A] = Opt(a)
+    def flatMap[A,B](ma: M[A], f: A => M[B]): M[B] = ma flatMap f
+    
+    def map[A,B](ma: F[A], f: A => B): F[B] = ma map f
+  }
+  
   implicit val SeqMonad = new Monad[Seq] {
     def lift[A](a: A): M[A] = Seq(a)
     def flatMap[A,B](ma: M[A], f: A => M[B]): M[B] = ma flatMap f

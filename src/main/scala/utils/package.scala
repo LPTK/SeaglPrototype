@@ -55,8 +55,14 @@ package object utils {
     def shit (msg: Str) = throw new Exception("Something " + msg)
   }
   
+  
+  // Useful free-standing functions
+  
+  def not(b: Bool) = !b
+  
   def some[A](a: A) = Some(a)
   def none = None
+  
   def left[A](a: A) = Left(a)
   def right[A](a: A) = Right(a)
   
@@ -81,6 +87,7 @@ package object utils {
   
   implicit class GenHelper[A](val __self: A) extends AnyVal {
     def |> [B] (rhs: A => B): B = rhs(__self)
+    def into [B] (rhs: A => B): B = rhs(__self)
     /**A lesser precedence one! */ def /> [B] (rhs: A => B): B = rhs(__self)
 //  }
 //  implicit class RightAssocApp[A, B](self: A => B) extends AnyVal {
@@ -94,9 +101,12 @@ package object utils {
      */
     def <|: [B] (lhs: A => B): B = lhs(__self)
 //    def >>: [B] (lhs: {def apply(x: A): B}): B = lhs(rhs)
+    
+    def ==> (rhs: Bool)(implicit ev: A <:< Bool) = !__self || rhs
   }
   implicit class FunHelper[A,B](val __self: A => B) extends AnyVal {
     def <| (rhs: A): B = __self(rhs)
+    def taking(rhs: A): B = __self(rhs)
     def |>: (lhs: A): B = __self(lhs)
   }
   

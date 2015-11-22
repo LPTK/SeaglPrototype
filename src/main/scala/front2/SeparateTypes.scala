@@ -5,7 +5,10 @@ import utils._
 import common._
 import Stages2._
 
-
+/**
+  * TODO also separate kinds
+  * 
+  */
 object SeparateTypes extends SameStageConverterClass[AST.type](AST) with Transformer {
   import Result._
   

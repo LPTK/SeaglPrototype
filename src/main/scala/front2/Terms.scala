@@ -3,7 +3,6 @@ package front2
 import common.Printable.PrintOptions
 import utils._
 import common._
-import scala.collection.Seq
 import scala.util.parsing.input.Positional
 
 /**
@@ -19,9 +18,9 @@ trait Terms extends PrettyPrint {
 //  type AnyStmt = TypeStmt | ValueStmt
 //  implicit def t2stmt(a: TypeStmt): AnyStmt = Left(a)
 //  implicit def v2stmt(a: ValueStmt): AnyStmt = Right(a)
-  type AnyStmt = types.Stmt | values.Stmt
-  /*implicit*/ def t2stmt(a: types.Stmt): AnyStmt = Left(a)
-  /*implicit*/ def v2stmt(a: values.Stmt): AnyStmt = Right(a)
+  type GenStmt = types.Stmt | values.Stmt
+  /*implicit*/ def t2stmt(a: types.Stmt): GenStmt = Left(a)
+  /*implicit*/ def v2stmt(a: values.Stmt): GenStmt = Right(a)
   
   
   /** TEMPLATE FOR CLASSES COMMON TO TYPES AND VALUES */
@@ -45,14 +44,14 @@ trait Terms extends PrettyPrint {
     type Modif = stage.Modif
     
     //implicit def stmt2anyS(a: Stmt): AnyStmt //= Left(a)
-    implicit def stmt2anyS: Stmt => AnyStmt
+    implicit def stmt2anyS: Stmt => GenStmt
     
     /**
      * If patterns are not to be put in ANF, Node[+T] would be more appropriate 
      */
-    type Node <: SelfPrintable //case class Node(term: Term, md: Metadata)
+    type Node //<: SelfPrintable //case class Node(term: Term, md: Metadata)
     def Node(term: Term, md: Metadata): Node
-    type SubNode <: SelfPrintable //<: Node
+    type SubNode //<: SelfPrintable //<: Node
     def SubNode(term: SubTerm with Term, md: Metadata): SubNode
 //    type NodeType = { val term: Term; val md: Metadata }
 //    type Node <: NodeType //case class Node(term: Term, md: Metadata)
@@ -63,12 +62,15 @@ trait Terms extends PrettyPrint {
     
     //trait Stmt extends ASTStmt with CoreStmt
     
+    sealed trait AnyTerm
+    sealed trait AnyStmt
+    
     ///** Terms valid as the body of a `Let` (any term) */
     /** Terms that are BOTH AST and Core */
     sealed trait ComTerm extends ASTTerm with CoreTerm with ExplicitOuter
     
     /** Terms valid as subexpressions (in ANF) */
-    sealed trait SubTerm //extends GenTerm //with ASTTerm with CoreTerm
+    sealed trait SubTerm extends AnyTerm //extends GenTerm //with ASTTerm with CoreTerm
     
     sealed trait ComStmt extends ASTStmt with CoreStmt { override val outer = terms }
     
@@ -107,13 +109,13 @@ trait Terms extends PrettyPrint {
     // case class Dual(t: dualWorld.Term) extends Term
     case class DepApp(fun: SubNode, darg: dualWorld.SubNode) extends ComTerm
     
-    case class Block(stmts: Ls[AnyStmt], ret: Node) extends ComTerm
+    case class Block(stmts: Ls[GenStmt], ret: Node) extends ComTerm
     
     //case class Ascribe(v: SubNode, k: Kind) extends SubTerm with ComTerm
     case class Ascribe(v: SubNode, k: Kind) extends SubTerm with ComTerm
     
     
-    case class Let(modif: Modif, pattern: Node, body: Node, where: Ls[AnyStmt] = Ls()) extends ComStmt with ASTTerm
+    case class Let(modif: Modif, pattern: Node, body: Node, where: Ls[GenStmt] = Ls()) extends ComStmt with ASTTerm
     
     /** TODO discard in type world at type-checking */
     case class Impure(n: Node) extends ComStmt //values.ComStmt// ComStmt with values.ComStmt
@@ -123,8 +125,8 @@ trait Terms extends PrettyPrint {
     // AST TERMS/STATEMENTS
     //---
     
-    sealed trait ASTTerm extends PrettyPrinted //extends SubTerm //extends GenTerm
-    sealed trait ASTStmt extends PrettyPrinted { val outer = terms }
+    sealed trait ASTTerm extends AnyTerm with PrettyPrinted //extends SubTerm //extends GenTerm
+    sealed trait ASTStmt extends AnyStmt with PrettyPrinted { val outer = terms }
     //object AST {
       
     case class Lambda(pattern: Node, body: Node) extends ASTTerm
@@ -138,7 +140,7 @@ trait Terms extends PrettyPrint {
     
     case class OpTerm(op: Operator) extends ASTTerm
     
-    case class ModBlock(modifs: Modif, stmts: Ls[AnyStmt]) extends ASTStmt {
+    case class ModBlock(modifs: Modif, stmts: Ls[GenStmt]) extends ASTStmt {
       require(stmts.size > 0)
     }
       
@@ -149,13 +151,13 @@ trait Terms extends PrettyPrint {
     // CORE TERMS/STATEMENTS
     //---
     
-    sealed trait CoreTerm extends PrettyPrinted
-    sealed trait CoreStmt extends PrettyPrinted { val outer = terms }
+    sealed trait CoreTerm extends AnyTerm with PrettyPrinted
+    sealed trait CoreStmt extends AnyStmt with PrettyPrinted { val outer = terms }
     //object Core {
       
     case class Closure(param: Ident, body: Node) extends CoreTerm with SubTerm
     
-    case class RecBlock(stmts: Ls[AnyStmt]) extends CoreStmt
+    case class RecBlock(stmts: Ls[GenStmt]) extends CoreStmt
       
     //}
     
@@ -191,7 +193,12 @@ trait Terms extends PrettyPrint {
     
     //case class Node(term: Term, md: Metadata) extends printer.PrettyPrinted with SelfPrintable {
     class Node(val term: Term, val md: Metadata) extends printer.PrettyPrinted with SelfPrintable {
-      def print(implicit po: PrintOptions) = ??? //Doc(term.toString, Metadata(md))
+      def print(implicit po: PrintOptions) = Doc("???") //Doc(term.toString, Metadata(md))
+      override def equals(that: Any) = that match {
+        //case Node(t, _) => term == t
+        case x: Node => term == x.term
+        case _ => false
+      }
     }
     def Node(term: Term, md: Metadata): Node = new Node(term, md) // it's a shame Scala fails to see it implemented with Node a case class...
     

@@ -26,7 +26,7 @@ conv =>
 //    case Left(ts) => tstmt(ts) map ((s:b.TypeStmt) => Left(s))
 //    case Right(vs) => vstmt(vs) map ((s:b.ValueStmt) => Right(s))
 //  }
-  def process(x: a.AnyStmt): Result[b.AnyStmt] = x match {
+  def process(x: a.GenStmt): Result[b.GenStmt] = x match {
     case Left(ts) => tconv.stmt(ts) map (s => Left(s))
     case Right(vs) => vconv.stmt(vs) map (s => Right(s))
   }

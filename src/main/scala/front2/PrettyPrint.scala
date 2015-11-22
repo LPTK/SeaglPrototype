@@ -81,7 +81,7 @@ self: Terms =>
     
     implicit val comStmtPrint: Printable[ComStmt] = Printable { // TODO use doc"" interpolation
       case Let(mod, pat, bod, whe) => s"${print(mod)}$pat = $bod" + (if (whe.isEmpty) "" else "\nwhere " + (whe mkString ";"))
-      case Impure(n) => print(n)
+      case Impure(n) => ??? //print(n)
     }
     implicit val astStmtPrint: Printable[ASTStmt] = Printable {
       case t.ModBlock(modifs, stmts) => ???
