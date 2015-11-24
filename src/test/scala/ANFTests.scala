@@ -50,7 +50,7 @@ class ANFTests extends FunSuite {
             case Left(_) | Right(_) =>
           }
           rec(r term, bindings)
-        case App(a, b) => rec(a term, bound) ++ rec(b term, bound)
+        case App(a, b, _) => rec(a term, bound) ++ rec(b term, bound)
         case Closure(pa, bo) => rec(bo term, bound + pa)
         case _: Literal[_] => Nil
         //case ... // TODO
@@ -64,7 +64,7 @@ class ANFTests extends FunSuite {
     def eqtBindings (that: Node): ?[Ident -> Ident |> Set] = self.term -> that.term match {
       case (a: Literal[_], b: Literal[_]) => if (a == b) Some(Set()) else None
       case Id(a) -> Id(b) => Set(a -> b) |> some
-      case App(f1,a1) -> App(f2,a2) => for (f <- (f1 eqtBindings f2); a <- (a1 eqtBindings a2)) yield f ++ a
+      case App(f1,a1,_) -> App(f2,a2,_) => for (f <- (f1 eqtBindings f2); a <- (a1 eqtBindings a2)) yield f ++ a
       case Block(sts1, r1) -> Block(sts2, r2) => for (sts <- Monad.sequence((sts1 zip sts2) map {
         case Right(Let(_, p1, b1, _)) -> Right(Let(_, p2, b2, _)) =>
           for (p <- (p1 eqtBindings p2); b <- (b1 eqtBindings b2)) yield p ++ b

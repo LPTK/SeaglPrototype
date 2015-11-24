@@ -83,8 +83,8 @@ object Stages2 {
   
   object Desugared extends Stage2 with PretypedStage with ANFStage {
     
-    type TypeMetadata = Origin
-    type ValueMetadata = Origin
+    type TypMd = Origin
+    type ValMd = Origin
     
 //    case class TypeNode(term: Type, md: Origin)
 //    case class ValueNode(term: Value, md: Origin)
@@ -102,10 +102,9 @@ object Stages2 {
   
   object Typed extends Stage2 with ANFStage {
     
-    type TypeMetadata = Origin
+    type TypMd = Origin
     //type ValueMetadata = (Origin, Type)
-    case class ValueMetadata(org: Origin, typ: Type)
-    def vmd(org: Origin, typ: Type) = ValueMetadata(org, typ)
+    case class ValMd(org: Origin, typ: Type)
     
   }
   
@@ -193,8 +192,8 @@ object Stages2 {
 //    //class ValueSubNode(override val term: values.SubTerm, md: ValueMetadata) extends ValueNode(term, md)
 //    
     type Modif = Modification
-    type TypeMetadata
-    type ValueMetadata
+    type TypMd
+    type ValMd
     
     /** Note: cannot use Template[values.type](values) here because of cyclic dependency */
     object types extends Core with ComTypes {
@@ -202,7 +201,7 @@ object Stages2 {
       lazy val dualWorld = values
     //object types extends Template[values.type](values) with Core with ComTypes {
       
-      type Metadata = TypeMetadata
+      type Metadata = TypMd
       
       type Kind = Types.Kind
       
@@ -218,7 +217,7 @@ object Stages2 {
 //      val dualWorld = types
     object values extends DualTemplate[types.type](types) with ANF with ComValues {
       
-      type Metadata = ValueMetadata
+      type Metadata = ValMd
       
       //type Kind = Type
       type Kind = types.Node

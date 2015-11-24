@@ -59,13 +59,13 @@ conv =>
       for {
         (t, typ) <- typeinfer(x.term, x.md)
         //t <- process(x.term)
-      } yield tb.Node(t, b.vmd(x.md, typ))
+      } yield tb.Node(t, b.ValMd(x.md, typ))
     
     def snod(x: vconv.ta.SubNode): State[Ctx, vconv.tb.SubNode] =
       for {
         (t, typ) <- typeinferSub(x.term, x.md)
         //t <- subCoreTerm(x.term) //: ta.SubTerm)
-      } yield tb.SubNode(t, b.vmd(x.md, typ))
+      } yield tb.SubNode(t, b.ValMd(x.md, typ))
   
     def kin(x: Desugared.types.Node): State[Ctx, Typed.types.Node] = ???
     
