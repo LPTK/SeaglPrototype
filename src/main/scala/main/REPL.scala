@@ -77,7 +77,7 @@ object REPL extends ConsoleReader {
     pr( s"$frameChar $cutie " + ("Welcome to " in txtClr) + ("Leopar" in RED in BOLD) + (s" v.$VERSION " in txtClr) + s"$cutie $frameChar" )
     pr(("╚" + frameLine + "╝") in CYAN)
     
-    pr("Type a space at the end of your input to enter multiline mode, and a comma to exit it." in GREY)
+    pr("Type a space at the end of your input to enter multiline mode, and a semicolon to exit it." in GREY)
     //pr("Type a comma after your input to enter multiline mode." in GREY)
     
     out.println()
@@ -121,7 +121,7 @@ object REPL extends ConsoleReader {
           }
           thr.setPriority(Thread.MAX_PRIORITY)
           thr.setDaemon(true)
-          thr.start()  
+          thr.start()
           
           if (multilineMode) readLine else ""
         }
@@ -170,7 +170,7 @@ object REPL extends ConsoleReader {
               
               //out.println(info("Typed", GREEN) + TypedPrinter(typed))
               //val typ = Typed.types.Node(typed.md._2, null)
-              val typ = typed.md._2
+              val typ = typed.md.typ
               //out.println(info("Typed", GREEN) + TypedPrinter.applyTyp(typ))
               val (doc, npctx) = printingContext |> TypedPrinter.tconv.nod(typ)
               printingContext = npctx

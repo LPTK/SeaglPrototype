@@ -114,8 +114,8 @@ conv =>
         
       case Atom(nam, args) => for { args <- Monad.sequence(args map snod) }
         yield doc"`$nam" :: args.mkDocument(" ")
-      case App(fun, arg) => for(fun <- snod(fun); arg <- snod(arg))
-        yield doc"($fun $arg)"
+      case App(fun, arg, opt) => for(fun <- snod(fun); arg <- snod(arg))
+        yield if (opt) doc"($fun $arg ?)" else doc"($fun $arg)"
       case DepApp(fun, arg) => for(fun <- snod(fun); arg <- co.snod(arg))
         yield doc"($fun $arg)"
       case Block(stmts, ret) => for { stmts <- Monad.sequence(stmts map conv.print); ret <- nod(ret) }

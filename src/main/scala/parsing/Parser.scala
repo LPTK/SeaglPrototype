@@ -446,7 +446,7 @@ object ASTProxy {
     case init :+ (t: Term) => Block(init.toList, t)
     case _ => wtf("Wrong Block ction")
   }
-  def App(f: Term, a: Term): Term = values.App(f, a) |> N
+  def App(f: Term, a: Term): Term = values.App(f, a, false) |> N
   def OpAppL(a: Term, op: Operator): Term = values.OpAppL(a, op) |> N
   def OpAppR(op: Operator, a: Term): Term = values.OpAppR(op, a) |> N
   def OpTerm(op: Operator): Term = values.OpTerm(op: Operator) |> N

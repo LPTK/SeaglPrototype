@@ -83,7 +83,7 @@ object Metadata {
   //case class Type(typ: front2.Terms# TermsTemplate# Type)
   case class Type(typ: Stage2# Type) extends Entry { def name = "Type" } //; def isEmpty = false }
   //case class Type[S <: Stage2](typ: S# Type)
-  case class Kind(typ: front2.Types.TypeKind) extends Entry { def name = "Kind" } //; def isEmpty = false }
+  case class Kind(typ: front2.Types.Kind) extends Entry { def name = "Kind" } //; def isEmpty = false }
 }
 
 

@@ -53,7 +53,7 @@ object SeparateTypes extends SameStageConverterClass[AST.type](AST) with Transfo
     //  case ta.OpAppL  
     //}
     override def process(x: ComTerm) = x match {
-      case App(Node(OpAppL(x, SymbolOperator(":"))), y) =>
+      case App(Node(OpAppL(x, SymbolOperator(":"))), y, _) =>
         // Nota: not completely sure this is safe to do (don't they have an outer pointer?) -- but it avoids retraversing all the nodes
         tb.Ascribe(snod(x), tconv.nod(y.asInstanceOf[a.types.Node]) : AST.types.Node) //: tb.Kind)
       case _ => super.process(x)

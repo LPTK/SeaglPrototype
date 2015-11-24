@@ -99,8 +99,13 @@ trait Terms {
     case class Atom(name: Sym, args: Ls[SubNode]) extends SubTerm with ComTerm
     
     //case class Tuple(first: TNode, second: TNode) extends SubTerm // first class or not..?
-    
-    case class App(fun: SubNode, arg: SubNode) extends ComTerm
+  
+    /**
+      * @param optype
+      *   in type world: if this is an abstract Operation Type, or just a type-level application (irrel)
+      *   in value world: if this is a duck-typed Operation Type (TODO: should be 3 values: simple, opapp, duckapp)
+      */
+    case class App(fun: SubNode, arg: SubNode, optype: Bool) extends ComTerm
     
     // case class Dual(t: dualWorld.Term) extends Term
     case class DepApp(fun: SubNode, darg: dualWorld.SubNode) extends ComTerm

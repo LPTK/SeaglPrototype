@@ -60,7 +60,7 @@ object Stages2 {
       type DualWorld = values.type
       lazy val dualWorld = values
       
-      type Kind = Types.TypeKind
+      type Kind = Types.Kind
       
       //def stmt2anyS(a: Stmt) = Left(a)
       //def stmt2anyS = Left.apply
@@ -103,7 +103,9 @@ object Stages2 {
   object Typed extends Stage2 with ANFStage {
     
     type TypeMetadata = Origin
-    type ValueMetadata = (Origin, Type)
+    //type ValueMetadata = (Origin, Type)
+    case class ValueMetadata(org: Origin, typ: Type)
+    def vmd(org: Origin, typ: Type) = ValueMetadata(org, typ)
     
   }
   
@@ -202,7 +204,7 @@ object Stages2 {
       
       type Metadata = TypeMetadata
       
-      type Kind = Types.TypeKind
+      type Kind = Types.Kind
       
       type SubNode = Node
       def SubNode(term: SubTerm with Term, md: Metadata): SubNode = new SubNode(term, md)

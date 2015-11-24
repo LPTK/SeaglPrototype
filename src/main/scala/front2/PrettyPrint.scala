@@ -99,7 +99,7 @@ self: Terms =>
       case Literal(v) => v.toString
       case Id(id) => id.toString
       case Atom(nam, args) => s"`$nam" + (args mkString " ")
-      case App(fun, arg) => s"($fun $arg)"
+      case App(fun, arg, _) => s"($fun $arg)"
       case DepApp(fun, arg) => s"($fun $arg)"
       case Block(stmts, ret) =>
         //s"{${stmts map (_.fold(identity,identity)) mkString "; "}$ret}"

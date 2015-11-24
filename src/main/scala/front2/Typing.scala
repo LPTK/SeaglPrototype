@@ -6,14 +6,26 @@ import utils._
 import common._
 import Stages2._
 
-
+/**
+  * TODO infer FullType's
+  * 
+  */
 object Typing extends StageConverter[Desugared.type, Typed.type](Desugared, Typed) {
 conv =>
   
   val phaseName = "Typing"
   
   //type Ctx = Sym ->? b.Type
-  case class Ctx(typs: Ident ->? Types.TypeKind, vals: Ident ->? b.Type, inPattern: Bool = false)
+  case class Ctx(typs: Ident ->? Types.Kind, vals: Ident ->? b.Type, inPattern: Bool = false) {
+    def += (kv: Ident -> b.Type) = {
+      require(vals isDefinedAt kv._1 into not)
+      copy(vals = vals + kv)
+    }
+    def -= (k: Ident) = {
+      require(vals isDefinedAt k)
+      copy(vals = vals - k)
+    }
+  }
   object Ctx { val empty = Ctx(->?.empty, ->?.empty) }
   
   type Result[+T] = Monad.State[Ctx, T]
@@ -47,13 +59,13 @@ conv =>
       for {
         (t, typ) <- typeinfer(x.term, x.md)
         //t <- process(x.term)
-      } yield tb.Node(t, (x.md, typ))
+      } yield tb.Node(t, b.vmd(x.md, typ))
     
     def snod(x: vconv.ta.SubNode): State[Ctx, vconv.tb.SubNode] =
       for {
         (t, typ) <- typeinferSub(x.term, x.md)
         //t <- subCoreTerm(x.term) //: ta.SubTerm)
-      } yield tb.SubNode(t, (x.md, typ))
+      } yield tb.SubNode(t, b.vmd(x.md, typ))
   
     def kin(x: Desugared.types.Node): State[Ctx, Typed.types.Node] = ???
     
@@ -81,16 +93,18 @@ conv =>
     def typeinfer(x: ta.Term, org: Origin): Result[tb.Term -> b.Type] = x match {
       case x: ta.SubTerm => typeinferSub(x, org)
         
-      case ta.App(fun, arg) =>
+      case ta.App(fun, arg, opt) =>
+        require(!opt) // FIXME use opt?
         // TODO infer new typle class cstr for every typvar?
         for { fun <- snod(fun); arg <- snod(arg) }
-          yield fun.term -> fun.md._2 // TODO //tb.App(fun, arg) -> b.types.App(fun.md._2, arg.md._2)
+          //yield fun.term -> fun.md.typ // TODO
+          yield tb.App(fun, arg, opt) -> b.types.Node(b.types.App(fun.md.typ, arg.md.typ, true), org)
         
       case ta.DepApp(fu,ar) => ??? //for(fu <- snod(fu); ar <- co.snod(ar)) yield tb.DepApp(fu,ar)
         
       case ta.Block(sts, re) =>
         for (sts <- Monad.sequence(sts map conv.process); re <- nod(re))
-          yield tb.Block(sts, re) -> re.md._2
+          yield tb.Block(sts, re) -> re.md.typ
         
     }
     
@@ -131,9 +145,13 @@ conv =>
         
       case ta.Closure(pa, bo) =>
         val typ = newTypVar(ta.Id(pa), org)
-        ctx =>
-          nod(bo)(ctx) // TODO: how to add pa<:typ only for typing 'bo'?
-        ???
+        //ctx =>
+        //  nod(bo)(ctx) // TODO: how to add pa<:typ only for typing 'bo'?
+        for {
+          () <- modif(_ += pa -> typ)
+          bo <- nod(bo)
+          () <- modif(_ -= pa)
+        } yield tb.Closure(pa, bo) -> bo.md.typ      
         
     }
     

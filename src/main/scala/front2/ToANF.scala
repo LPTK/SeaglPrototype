@@ -177,7 +177,7 @@ toanf =>
         case ta.Id(LocalId(sym)) => sym
         //case ta.App(_,_) | ta.DepApp(_,_) => 'app
         //case ta.App(a,_) => nameHint(a.term) match {case Some(Sym(s)) => Sym(s.take(maxLen-2)+"ap") case None => 'app }
-        case ta.App(a,b) => (
+        case ta.App(a,b,_) => (
           for{Sym(a) <- nameHint(a.term); Sym(b) <- nameHint(b.term)} yield combine(a,b)
         ) getOrElse 'app
         case ta.DepApp(_,_) => 'dapp
@@ -260,10 +260,10 @@ toanf =>
 //          yield lams.map{case x: tb.Closure => tb.SubNode(x, md) case _ => wtf}.reduce(tb.App.apply)
         // Actually, reduce to Apps BEFORE converting!
         val Nd = ta.Node
-        val apps = lams map Nd reduce {(a,b) => ta.App(ta.App(a, LambdaCompoId |> ta.Id |> Nd) |> Nd, b) |> Nd}
+        val apps = lams map Nd reduce {(a,b) => ta.App(ta.App(a, LambdaCompoId |> ta.Id |> Nd, false) |> Nd, b, false) |> Nd}
         ast2Core(apps.term, org)
-      case ta.OpAppL(ar, op) => snod(ar) map {tb.App(_, tb.SubNode(tb.Id(op.id), Synthetic(phaseName, org|>some)/*TODO better md*/))}
-      case ta.OpAppR(op, ar) => snod(ar) map {tb.App(tb.SubNode(tb.Id(op.id), Synthetic(phaseName, org|>some)/*TODO better md*/), _)} // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
+      case ta.OpAppL(ar, op) => snod(ar) map {tb.App(_, tb.SubNode(tb.Id(op.id), Synthetic(phaseName, org|>some)/*TODO better md*/), false)}
+      case ta.OpAppR(op, ar) => snod(ar) map {tb.App(tb.SubNode(tb.Id(op.id), Synthetic(phaseName, org|>some)/*TODO better md*/), _, false)} // tb.App(nod(ta.OpTerm(op)), nod(ar).res)
       case ta.OpTerm(op) => tb.Id(op.id) |> lift
       //case _ => ??? // TODO OpApp, Let, etc.
     }
